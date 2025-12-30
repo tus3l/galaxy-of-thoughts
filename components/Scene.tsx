@@ -21,11 +21,15 @@ function SceneCleaner() {
     lastCleanup.current = now;
     
     scene.traverse((object) => {
-      // Aggressively remove Points objects (the center box)
+      // Remove Points ONLY if it's exactly at origin (the crosshair)
       if (object.type === 'Points') {
-        object.visible = false;
-        if (object.parent) {
-          object.parent.remove(object);
+        const dist = object.position.length();
+        // Only remove if it's VERY close to center (within 2 units)
+        if (dist < 2) {
+          object.visible = false;
+          if (object.parent) {
+            object.parent.remove(object);
+          }
         }
       }
       
@@ -36,7 +40,7 @@ function SceneCleaner() {
         object.type === 'LineSegments' ||
         object.type === 'LineLoop'
       ) {
-        if (object.position.length() < 50) {
+        if (object.position.length() < 5) {
           object.visible = false;
           object.parent?.remove(object);
         }
@@ -50,7 +54,7 @@ function SceneCleaner() {
           mesh.geometry?.type === 'PlaneGeometry' ||
           mesh.geometry?.type === 'PlaneBufferGeometry'
         ) {
-          if (mesh.position.length() < 100) {
+          if (mesh.position.length() < 10) {
             mesh.visible = false;
             mesh.parent?.remove(mesh);
           }
