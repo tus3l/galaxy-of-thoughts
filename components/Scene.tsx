@@ -21,13 +21,22 @@ function CrosshairRemover() {
     lastCheck.current = state.clock.elapsedTime;
     
     scene.traverse((object) => {
-      // Only remove Points that are EXACTLY at origin (0,0,0)
+      // Only remove Points that have very few vertices (likely a crosshair/gizmo)
       if (object.type === 'Points') {
-        const pos = object.position;
-        // Check if position is very close to (0,0,0) - within 0.1 units
-        if (Math.abs(pos.x) < 0.1 && Math.abs(pos.y) < 0.1 && Math.abs(pos.z) < 0.1) {
-          object.visible = false;
-          object.parent?.remove(object);
+        const points = object as THREE.Points;
+        const geometry = points.geometry;
+        
+        // Check vertex count - crosshair typically has 1-10 vertices
+        // BackgroundStars has 2000, ShootingStars has 15 (but they move)
+        const vertexCount = geometry.attributes.position?.count || 0;
+        
+        // Only remove if it's a small crosshair (less than 10 points) at origin
+        if (vertexCount < 10) {
+          const pos = object.position;
+          if (Math.abs(pos.x) < 0.1 && Math.abs(pos.y) < 0.1 && Math.abs(pos.z) < 0.1) {
+            object.visible = false;
+            object.parent?.remove(object);
+          }
         }
       }
     });
