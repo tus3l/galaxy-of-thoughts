@@ -60,10 +60,15 @@ interface SceneProps {
 }
 
 export default function Scene({ onStarClick }: SceneProps) {
+  // موقع عشوائي للكاميرا عند البداية
+  const randomX = (Math.random() - 0.5) * 400;
+  const randomY = (Math.random() - 0.5) * 400;
+  const randomZ = 50 + Math.random() * 150;
+  
   return (
     <Canvas
       camera={{
-        position: [0, 0, 50],
+        position: [randomX, randomY, randomZ],
         fov: 75,
       }}
       dpr={[1, 2]}

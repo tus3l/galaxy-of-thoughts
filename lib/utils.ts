@@ -15,7 +15,7 @@ export function generateStarData(count: number): StarData[] {
     // توزيع في عالم واسع جداً - النجوم بعيدة عن الكاميرا
     const theta = Math.random() * Math.PI * 2;
     const phi = Math.acos((Math.random() * 2) - 1);
-    const radius = 200 + Math.random() * 1800; // نطاق كبير جداً (200-2000)
+    const radius = 300 + Math.random() * 3200; // نطاق أكبر (300-3500)
 
     // توزيع ثلاثي الأبعاد واسع
     const x = radius * Math.sin(phi) * Math.cos(theta);
