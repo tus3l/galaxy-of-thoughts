@@ -14,41 +14,30 @@ function SceneCleaner() {
   const { scene, gl } = useThree();
   
   useEffect(() => {
-    let loggedOnce = false;
-    
     const cleanup = () => {
-      // Log all objects once for debugging
-      if (!loggedOnce) {
-        console.log('🔍 Scene objects:', scene.children.map(c => ({
-          type: c.type,
-          name: c.name,
-          position: c.position,
-          visible: c.visible
-        })));
-        loggedOnce = true;
-      }
-      
       scene.traverse((object) => {
-        // Log and remove any suspicious objects
-        const isNearCenter = object.position.length() < 50;
-        const isSuspicious = 
+        // Aggressively remove Points objects (the center box)
+        if (object.type === 'Points') {
+          object.visible = false;
+          if (object.parent) {
+            object.parent.remove(object);
+          }
+        }
+        
+        // Remove any Sprite, Line near center
+        if (
           object.type === 'Sprite' ||
           object.type === 'Line' ||
           object.type === 'LineSegments' ||
-          object.type === 'LineLoop' ||
-          object.type === 'Points' ||
-          (object as any).isHelper ||
-          object.type.includes('Helper') ||
-          object.type.includes('Gizmo') ||
-          object.type.includes('Control');
-        
-        if (isSuspicious && isNearCenter) {
-          console.log('❌ Removing:', object.type, object.name);
-          object.visible = false;
-          object.parent?.remove(object);
+          object.type === 'LineLoop'
+        ) {
+          if (object.position.length() < 50) {
+            object.visible = false;
+            object.parent?.remove(object);
+          }
         }
         
-        // Remove any Mesh with BoxGeometry or PlaneGeometry
+        // Remove any Mesh with BoxGeometry or PlaneGeometry near center
         if (object.type === 'Mesh') {
           const mesh = object as THREE.Mesh;
           if (
@@ -57,11 +46,21 @@ function SceneCleaner() {
             mesh.geometry?.type === 'PlaneBufferGeometry'
           ) {
             if (mesh.position.length() < 100) {
-              console.log('❌ Removing Box/Plane:', mesh.name, mesh.position);
               mesh.visible = false;
               mesh.parent?.remove(mesh);
             }
           }
+        }
+        
+        // Remove all helpers and controls
+        if (
+          (object as any).isHelper ||
+          object.type.includes('Helper') ||
+          object.type.includes('Gizmo') ||
+          object.type.includes('Control')
+        ) {
+          object.visible = false;
+          object.parent?.remove(object);
         }
       });
       
@@ -72,11 +71,9 @@ function SceneCleaner() {
       }
     };
     
-    // Run immediately
+    // Run immediately and very frequently
     cleanup();
-    
-    // Run every 500ms
-    const interval = setInterval(cleanup, 500);
+    const interval = setInterval(cleanup, 100); // Very fast cleanup
     
     return () => clearInterval(interval);
   }, [scene, gl]);
