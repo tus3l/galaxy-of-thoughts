@@ -91,9 +91,3 @@ export default function Home() {
     </main>
   );
 }
-          </button>
-        </div>
-      </div>
-    </main>
-  );
-}
