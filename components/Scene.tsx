@@ -6,6 +6,8 @@ import { OrbitControls, Environment } from '@react-three/drei';
 import { EffectComposer, Bloom } from '@react-three/postprocessing';
 import * as THREE from 'three';
 import Galaxy from './Galaxy';
+import ShootingStars from './ShootingStars';
+import BackgroundStars from './BackgroundStars';
 import { StarData } from '@/types';
 
 interface SceneProps {
@@ -46,7 +48,13 @@ export default function Scene({ onStarClick }: SceneProps) {
         <pointLight position={[-80, 50, -80]} intensity={1.0} color="#3355cc" decay={2} />
         <pointLight position={[0, -100, 50]} intensity={0.6} color="#1a2244" decay={2} />
         
+        {/* Background stars for depth */}
+        <BackgroundStars />
+        
         <Galaxy starCount={800} onStarClick={onStarClick} />
+        
+        {/* Shooting stars for beauty */}
+        <ShootingStars />
 
         <OrbitControls
           enableDamping
@@ -66,10 +74,10 @@ export default function Scene({ onStarClick }: SceneProps) {
 
         <EffectComposer>
           <Bloom
-            intensity={1.2}
-            luminanceThreshold={0.4}
+            intensity={0.6}
+            luminanceThreshold={0.5}
             luminanceSmoothing={0.9}
-            radius={0.8}
+            radius={0.6}
             mipmapBlur
           />
         </EffectComposer>
