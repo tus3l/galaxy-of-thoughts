@@ -126,6 +126,7 @@ export default function Scene({ onStarClick }: SceneProps) {
           screenSpacePanning={false}
           target={[0, 0, 0]}
           regress={false}
+          listenToKeyEvents={false}
         />
 
         <EffectComposer>

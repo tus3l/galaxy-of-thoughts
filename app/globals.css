@@ -71,6 +71,34 @@ canvas ~ span {
   opacity: 0 !important;
 }
 
+/* Force hide center crosshair/box */
+canvas::after,
+canvas::before {
+  content: none !important;
+  display: none !important;
+}
+
+/* Hide any div that might be the center box */
+div[style*="position: absolute"],
+div[style*="position: fixed"] {
+  display: none !important;
+}
+
+/* Override OrbitControls CSS */
+.orbit-controls,
+.orbit-controls * {
+  display: none !important;
+  visibility: hidden !important;
+}
+
+/* Hide anything in the center of viewport */
+[style*="top: 50%"],
+[style*="left: 50%"],
+[style*="transform: translate(-50%, -50%)"] {
+  display: none !important;
+  visibility: hidden !important;
+}
+
 main {
   cursor: default;
 }
