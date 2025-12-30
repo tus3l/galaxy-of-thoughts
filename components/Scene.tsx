@@ -1,7 +1,7 @@
 'use client';
 
-import { Canvas, useThree } from '@react-three/fiber';
-import { Suspense, useEffect } from 'react';
+import { Canvas, useThree, useFrame } from '@react-three/fiber';
+import { Suspense, useEffect, useRef } from 'react';
 import { OrbitControls, Environment } from '@react-three/drei';
 import { EffectComposer, Bloom } from '@react-three/postprocessing';
 import * as THREE from 'three';
@@ -12,73 +12,68 @@ import { StarData } from '@/types';
 
 function SceneCleaner() {
   const { scene, gl } = useThree();
+  const lastCleanup = useRef(0);
   
-  useEffect(() => {
-    if (!scene || !gl) return;
+  useFrame((state) => {
+    // Run cleanup every 0.1 seconds (100ms)
+    const now = state.clock.getElapsedTime();
+    if (now - lastCleanup.current < 0.1) return;
+    lastCleanup.current = now;
     
-    const cleanup = () => {
-      scene.traverse((object) => {
-        // Aggressively remove Points objects (the center box)
-        if (object.type === 'Points') {
-          object.visible = false;
-          if (object.parent) {
-            object.parent.remove(object);
-          }
+    scene.traverse((object) => {
+      // Aggressively remove Points objects (the center box)
+      if (object.type === 'Points') {
+        object.visible = false;
+        if (object.parent) {
+          object.parent.remove(object);
         }
-        
-        // Remove any Sprite, Line near center
-        if (
-          object.type === 'Sprite' ||
-          object.type === 'Line' ||
-          object.type === 'LineSegments' ||
-          object.type === 'LineLoop'
-        ) {
-          if (object.position.length() < 50) {
-            object.visible = false;
-            object.parent?.remove(object);
-          }
-        }
-        
-        // Remove any Mesh with BoxGeometry or PlaneGeometry near center
-        if (object.type === 'Mesh') {
-          const mesh = object as THREE.Mesh;
-          if (
-            mesh.geometry?.type === 'BoxGeometry' ||
-            mesh.geometry?.type === 'PlaneGeometry' ||
-            mesh.geometry?.type === 'PlaneBufferGeometry'
-          ) {
-            if (mesh.position.length() < 100) {
-              mesh.visible = false;
-              mesh.parent?.remove(mesh);
-            }
-          }
-        }
-        
-        // Remove all helpers and controls
-        if (
-          (object as any).isHelper ||
-          object.type.includes('Helper') ||
-          object.type.includes('Gizmo') ||
-          object.type.includes('Control')
-        ) {
+      }
+      
+      // Remove any Sprite, Line near center
+      if (
+        object.type === 'Sprite' ||
+        object.type === 'Line' ||
+        object.type === 'LineSegments' ||
+        object.type === 'LineLoop'
+      ) {
+        if (object.position.length() < 50) {
           object.visible = false;
           object.parent?.remove(object);
         }
-      });
-      
-      // Force cursor
-      const canvas = gl.domElement;
-      if (canvas) {
-        canvas.style.cursor = 'grab';
       }
-    };
+      
+      // Remove any Mesh with BoxGeometry or PlaneGeometry near center
+      if (object.type === 'Mesh') {
+        const mesh = object as THREE.Mesh;
+        if (
+          mesh.geometry?.type === 'BoxGeometry' ||
+          mesh.geometry?.type === 'PlaneGeometry' ||
+          mesh.geometry?.type === 'PlaneBufferGeometry'
+        ) {
+          if (mesh.position.length() < 100) {
+            mesh.visible = false;
+            mesh.parent?.remove(mesh);
+          }
+        }
+      }
+      
+      // Remove all helpers and controls
+      if (
+        (object as any).isHelper ||
+        object.type.includes('Helper') ||
+        object.type.includes('Gizmo') ||
+        object.type.includes('Control')
+      ) {
+        object.visible = false;
+        object.parent?.remove(object);
+      }
+    });
     
-    // Run immediately and very frequently
-    cleanup();
-    const interval = setInterval(cleanup, 100); // Very fast cleanup
-    
-    return () => clearInterval(interval);
-  }, [scene, gl]);
+    // Force cursor
+    if (gl?.domElement) {
+      gl.domElement.style.cursor = 'grab';
+    }
+  });
   
   return null;
 }
