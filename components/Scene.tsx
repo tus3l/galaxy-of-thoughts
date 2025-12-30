@@ -29,17 +29,20 @@ export default function Scene({ onStarClick }: SceneProps) {
       style={{ touchAction: 'none' }}
     >
       <Suspense fallback={null}>
-        {/* HDR Environment - Blue Nebulae from GitHub Releases */}
+        {/* HDR Environment - Using studio preset with dark space atmosphere */}
         <Environment 
-          files="https://github.com/tus3l/galaxy-of-thoughts/releases/download/1/HDR_blue_nebulae-1.hdr"
-          background 
-          blur={0.05}
-          backgroundIntensity={0.5}
+          preset="sunset"
+          background
+          blur={1.5}
+          backgroundIntensity={0.15}
+          backgroundRotation={[0, Math.PI / 2, 0]}
         />
         
-        {/* Enhanced lighting for space atmosphere */}
-        <ambientLight intensity={0.3} />
-        <pointLight position={[10, 10, 10]} intensity={0.6} color="#a0b4ff" />
+        {/* Space-like lighting */}
+        <ambientLight intensity={0.2} />
+        <pointLight position={[20, 20, 20]} intensity={1.0} color="#6688ff" />
+        <pointLight position={[-20, -10, -20]} intensity={0.5} color="#2244aa" />
+        <pointLight position={[0, -30, 0]} intensity={0.3} color="#1a1a3a" />
         
         <Galaxy starCount={800} onStarClick={onStarClick} />
 
