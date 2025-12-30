@@ -14,6 +14,8 @@ function SceneCleaner() {
   const { scene, gl } = useThree();
   
   useEffect(() => {
+    if (!scene || !gl) return;
+    
     const cleanup = () => {
       scene.traverse((object) => {
         // Aggressively remove Points objects (the center box)
