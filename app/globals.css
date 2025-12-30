@@ -28,11 +28,18 @@ body {
 
 /* Hide any default cursor/crosshair */
 canvas {
-  cursor: grab;
+  cursor: grab !important;
+  outline: none !important;
 }
 
 canvas:active {
-  cursor: grabbing;
+  cursor: grabbing !important;
+}
+
+/* Hide Three.js default helpers */
+.leva-container,
+.leva__container {
+  display: none !important;
 }
 
 /* Glassmorphism utilities */

@@ -8,7 +8,6 @@ import * as THREE from 'three';
 import Galaxy from './Galaxy';
 import ShootingStars from './ShootingStars';
 import BackgroundStars from './BackgroundStars';
-import SpaceNebula from './SpaceNebula';
 import { StarData } from '@/types';
 
 interface SceneProps {
@@ -48,9 +47,6 @@ export default function Scene({ onStarClick }: SceneProps) {
         <pointLight position={[100, 100, 100]} intensity={1.5} color="#6699ff" decay={2} />
         <pointLight position={[-80, 50, -80]} intensity={1.0} color="#3355cc" decay={2} />
         <pointLight position={[0, -100, 50]} intensity={0.6} color="#1a2244" decay={2} />
-        
-        {/* Space nebula for atmosphere */}
-        <SpaceNebula />
         
         {/* Background stars for depth */}
         <BackgroundStars />
