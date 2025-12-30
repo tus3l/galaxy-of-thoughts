@@ -24,25 +24,27 @@ export default function Scene({ onStarClick }: SceneProps) {
         antialias: true,
         powerPreference: 'high-performance',
         toneMapping: THREE.ACESFilmicToneMapping,
-        toneMappingExposure: 1.0,
+        toneMappingExposure: 1.2,
       }}
       style={{ touchAction: 'none' }}
     >
       <Suspense fallback={null}>
-        {/* HDR Environment - Using studio preset with dark space atmosphere */}
+        {/* Deep Space Environment */}
+        <color attach="background" args={['#000510']} />
+        <fog attach="fog" args={['#000510', 100, 2000]} />
+        
         <Environment 
-          preset="sunset"
-          background
-          blur={1.5}
-          backgroundIntensity={0.15}
-          backgroundRotation={[0, Math.PI / 2, 0]}
+          preset="night"
+          background={false}
+          blur={0.9}
         />
         
-        {/* Space-like lighting */}
-        <ambientLight intensity={0.2} />
-        <pointLight position={[20, 20, 20]} intensity={1.0} color="#6688ff" />
-        <pointLight position={[-20, -10, -20]} intensity={0.5} color="#2244aa" />
-        <pointLight position={[0, -30, 0]} intensity={0.3} color="#1a1a3a" />
+        {/* Cinematic Space Lighting */}
+        <ambientLight intensity={0.15} color="#0a1428" />
+        <directionalLight position={[50, 50, 50]} intensity={0.4} color="#4466ff" />
+        <pointLight position={[100, 100, 100]} intensity={1.5} color="#6699ff" decay={2} />
+        <pointLight position={[-80, 50, -80]} intensity={1.0} color="#3355cc" decay={2} />
+        <pointLight position={[0, -100, 50]} intensity={0.6} color="#1a2244" decay={2} />
         
         <Galaxy starCount={800} onStarClick={onStarClick} />
 
@@ -64,9 +66,11 @@ export default function Scene({ onStarClick }: SceneProps) {
 
         <EffectComposer>
           <Bloom
-            intensity={0.4}
-            luminanceThreshold={0.9}
-            radius={0.3}
+            intensity={1.2}
+            luminanceThreshold={0.4}
+            luminanceSmoothing={0.9}
+            radius={0.8}
+            mipmapBlur
           />
         </EffectComposer>
       </Suspense>
