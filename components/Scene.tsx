@@ -29,12 +29,12 @@ export default function Scene({ onStarClick }: SceneProps) {
       style={{ touchAction: 'none' }}
     >
       <Suspense fallback={null}>
-        {/* HDR Environment - Local file in public folder */}
+        {/* HDR Environment - Blue Nebulae from GitHub Releases */}
         <Environment 
-          files="/space.hdr"
+          files="https://github.com/tus3l/galaxy-of-thoughts/releases/download/1/HDR_blue_nebulae-1.hdr"
           background 
-          blur={0.1}
-          backgroundIntensity={0.4}
+          blur={0.05}
+          backgroundIntensity={0.5}
         />
         
         {/* Enhanced lighting for space atmosphere */}
