@@ -11,30 +11,56 @@ import BackgroundStars from './BackgroundStars';
 import { StarData } from '@/types';
 
 function SceneCleaner() {
-  const { scene, gl } = useThree();
+  const { scene, gl, camera } = useThree();
   
   useEffect(() => {
-    // Remove any helpers or gizmos
-    scene.traverse((object) => {
-      if (
-        object instanceof THREE.GridHelper ||
-        object instanceof THREE.AxesHelper ||
-        object instanceof THREE.CameraHelper ||
-        object instanceof THREE.BoxHelper ||
-        object instanceof THREE.Box3Helper ||
-        (object as any).isTransformControls ||
-        (object as any).isHelper
-      ) {
-        object.visible = false;
-        if (object.parent) {
-          object.parent.remove(object);
+    const interval = setInterval(() => {
+      // Remove any unwanted objects
+      scene.traverse((object) => {
+        // Check if it's a helper or unwanted mesh
+        if (
+          object.type === 'GridHelper' ||
+          object.type === 'AxesHelper' ||
+          object.type === 'CameraHelper' ||
+          object.type === 'BoxHelper' ||
+          object.type === 'Box3Helper' ||
+          object.type === 'ArrowHelper' ||
+          object.type === 'PlaneHelper' ||
+          object.type === 'SkeletonHelper' ||
+          (object as any).isTransformControls ||
+          (object as any).isHelper
+        ) {
+          object.visible = false;
+          object.parent?.remove(object);
         }
-      }
-    });
+        
+        // Remove any Box or Plane that's not part of our scene
+        if (object.type === 'Mesh') {
+          const mesh = object as THREE.Mesh;
+          const geometry = mesh.geometry;
+          
+          // Check if it's a small box/plane that might be a gizmo
+          if (geometry.type === 'BoxGeometry' || geometry.type === 'PlaneGeometry') {
+            const boundingBox = new THREE.Box3().setFromObject(mesh);
+            const size = new THREE.Vector3();
+            boundingBox.getSize(size);
+            
+            // If it's a small box near center (likely a gizmo)
+            if (size.length() < 10 && mesh.position.length() < 50) {
+              mesh.visible = false;
+              mesh.parent?.remove(mesh);
+            }
+          }
+        }
+      });
+      
+      // Force cursor style
+      gl.domElement.style.cursor = 'grab';
+      document.body.style.cursor = 'default';
+    }, 100);
     
-    // Hide DOM overlay
-    gl.domElement.style.cursor = 'grab';
-  }, [scene, gl]);
+    return () => clearInterval(interval);
+  }, [scene, gl, camera]);
   
   return null;
 }
