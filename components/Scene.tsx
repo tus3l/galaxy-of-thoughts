@@ -1,7 +1,7 @@
 'use client';
 
-import { Canvas } from '@react-three/fiber';
-import { Suspense } from 'react';
+import { Canvas, useThree, useFrame } from '@react-three/fiber';
+import { Suspense, useRef } from 'react';
 import { OrbitControls, Environment } from '@react-three/drei';
 import { EffectComposer, Bloom } from '@react-three/postprocessing';
 import * as THREE from 'three';
@@ -9,6 +9,32 @@ import Galaxy from './Galaxy';
 import ShootingStars from './ShootingStars';
 import BackgroundStars from './BackgroundStars';
 import { StarData } from '@/types';
+
+// Component to remove center crosshair only
+function CrosshairRemover() {
+  const { scene } = useThree();
+  const lastCheck = useRef(0);
+  
+  useFrame((state) => {
+    // Check every 200ms
+    if (state.clock.elapsedTime - lastCheck.current < 0.2) return;
+    lastCheck.current = state.clock.elapsedTime;
+    
+    scene.traverse((object) => {
+      // Only remove Points that are EXACTLY at origin (0,0,0)
+      if (object.type === 'Points') {
+        const pos = object.position;
+        // Check if position is very close to (0,0,0) - within 0.1 units
+        if (Math.abs(pos.x) < 0.1 && Math.abs(pos.y) < 0.1 && Math.abs(pos.z) < 0.1) {
+          object.visible = false;
+          object.parent?.remove(object);
+        }
+      }
+    });
+  });
+  
+  return null;
+}
 
 interface SceneProps {
   onStarClick?: (star: StarData) => void;
@@ -36,6 +62,8 @@ export default function Scene({ onStarClick }: SceneProps) {
       style={{ touchAction: 'none' }}
     >
       <Suspense fallback={null}>
+        <CrosshairRemover />
+        
         {/* Deep Space Environment */}
         <color attach="background" args={['#000510']} />
         <fog attach="fog" args={['#000510', 100, 2000]} />
