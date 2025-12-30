@@ -11,56 +11,46 @@ import BackgroundStars from './BackgroundStars';
 import { StarData } from '@/types';
 
 function SceneCleaner() {
-  const { scene, gl, camera } = useThree();
+  const { scene, gl } = useThree();
   
   useEffect(() => {
-    const interval = setInterval(() => {
-      // Remove any unwanted objects
+    const cleanup = () => {
       scene.traverse((object) => {
-        // Check if it's a helper or unwanted mesh
-        if (
-          object.type === 'GridHelper' ||
-          object.type === 'AxesHelper' ||
-          object.type === 'CameraHelper' ||
-          object.type === 'BoxHelper' ||
-          object.type === 'Box3Helper' ||
-          object.type === 'ArrowHelper' ||
-          object.type === 'PlaneHelper' ||
-          object.type === 'SkeletonHelper' ||
-          (object as any).isTransformControls ||
-          (object as any).isHelper
-        ) {
-          object.visible = false;
-          object.parent?.remove(object);
-        }
-        
-        // Remove any Box or Plane that's not part of our scene
+        // Remove any Mesh with BoxGeometry or PlaneGeometry
         if (object.type === 'Mesh') {
           const mesh = object as THREE.Mesh;
-          const geometry = mesh.geometry;
-          
-          // Check if it's a small box/plane that might be a gizmo
-          if (geometry.type === 'BoxGeometry' || geometry.type === 'PlaneGeometry') {
-            const boundingBox = new THREE.Box3().setFromObject(mesh);
-            const size = new THREE.Vector3();
-            boundingBox.getSize(size);
-            
-            // If it's a small box near center (likely a gizmo)
-            if (size.length() < 10 && mesh.position.length() < 50) {
+          if (
+            mesh.geometry?.type === 'BoxGeometry' ||
+            mesh.geometry?.type === 'PlaneGeometry'
+          ) {
+            // Check if it's not a background element
+            if (mesh.position.length() < 100) {
               mesh.visible = false;
               mesh.parent?.remove(mesh);
             }
           }
         }
+        
+        // Remove all helpers
+        if (
+          (object as any).isHelper ||
+          object.type.includes('Helper') ||
+          object.type.includes('Gizmo')
+        ) {
+          object.visible = false;
+          object.parent?.remove(object);
+        }
       });
-      
-      // Force cursor style
-      gl.domElement.style.cursor = 'grab';
-      document.body.style.cursor = 'default';
-    }, 100);
+    };
+    
+    // Run immediately
+    cleanup();
+    
+    // Run every 500ms
+    const interval = setInterval(cleanup, 500);
     
     return () => clearInterval(interval);
-  }, [scene, gl, camera]);
+  }, [scene, gl]);
   
   return null;
 }
@@ -125,9 +115,11 @@ export default function Scene({ onStarClick }: SceneProps) {
             ONE: THREE.TOUCH.ROTATE,
             TWO: THREE.TOUCH.DOLLY_PAN
           }}
-          enablePan={true}
+          enablePan={false}
           panSpeed={0.5}
           makeDefault={false}
+          screenSpacePanning={false}
+          target={[0, 0, 0]}
         />
 
         <EffectComposer>
