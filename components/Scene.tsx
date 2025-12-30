@@ -29,17 +29,18 @@ export default function Scene({ onStarClick }: SceneProps) {
       style={{ touchAction: 'none' }}
     >
       <Suspense fallback={null}>
-        {/* HDR Environment - Space HDRI from Poly Haven (CORS enabled) */}
+        {/* HDR Environment - Using built-in preset (no external files) */}
         <Environment 
-          files="https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/starmap_2020_1k.hdr"
-          background 
-          blur={0.08}
-          backgroundIntensity={0.5}
+          preset="night"
+          background
+          blur={0.8}
+          backgroundIntensity={0.3}
         />
         
-        {/* Subtle fill lights */}
-        <ambientLight intensity={0.3} />
-        <pointLight position={[10, 10, 10]} intensity={0.6} />
+        {/* Enhanced lighting for space atmosphere */}
+        <ambientLight intensity={0.4} />
+        <pointLight position={[10, 10, 10]} intensity={0.8} color="#a0b4ff" />
+        <pointLight position={[-10, -10, -10]} intensity={0.4} color="#4060ff" />
         
         <Galaxy starCount={800} onStarClick={onStarClick} />
 
