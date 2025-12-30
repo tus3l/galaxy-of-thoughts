@@ -29,15 +29,16 @@ export default function Scene({ onStarClick }: SceneProps) {
       style={{ touchAction: 'none' }}
     >
       <Suspense fallback={null}>
-        {/* HDR Environment removed for GitHub deployment - add your own or use preset */}
-        {/* <Environment files="/your-hdr-file.hdr" background blur={0.04} /> */}
-        
-        {/* Using preset instead */}
-        <Environment preset="night" />
+        {/* HDR Environment - Blue Nebulae from SpaceSphereMaps */}
+        <Environment 
+          files="https://www.spacespheremaps.com/wp-content/uploads/HDR_blue_nebulae-1.hdr"
+          background 
+          blur={0.04}
+        />
         
         {/* Subtle fill lights */}
-        <ambientLight intensity={0.3} />
-        <pointLight position={[10, 10, 10]} intensity={0.8} />
+        <ambientLight intensity={0.2} />
+        <pointLight position={[10, 10, 10]} intensity={0.5} />
         
         <Galaxy starCount={800} onStarClick={onStarClick} />
 
