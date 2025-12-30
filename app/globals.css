@@ -36,10 +36,35 @@ canvas:active {
   cursor: grabbing !important;
 }
 
-/* Hide Three.js default helpers */
+/* Hide Three.js default helpers and controls */
 .leva-container,
-.leva__container {
+.leva__container,
+.dg.ac {
   display: none !important;
+}
+
+/* Hide any transform controls or gizmos */
+canvas::before,
+canvas::after {
+  display: none !important;
+}
+
+/* Override any inline styles */
+canvas[style] {
+  cursor: grab !important;
+}
+
+/* Hide OrbitControls center dot */
+body * {
+  cursor: inherit !important;
+}
+
+main {
+  cursor: default;
+}
+
+main canvas {
+  cursor: grab !important;
 }
 
 /* Glassmorphism utilities */

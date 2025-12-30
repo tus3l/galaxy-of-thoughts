@@ -70,6 +70,7 @@ export default function Scene({ onStarClick }: SceneProps) {
           }}
           enablePan={true}
           panSpeed={0.5}
+          makeDefault={false}
         />
 
         <EffectComposer>
