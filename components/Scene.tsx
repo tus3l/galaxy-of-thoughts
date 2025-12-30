@@ -14,20 +14,38 @@ function SceneCleaner() {
   const { scene, gl } = useThree();
   
   useEffect(() => {
+    let loggedOnce = false;
+    
     const cleanup = () => {
+      // Log all objects once for debugging
+      if (!loggedOnce) {
+        console.log('🔍 Scene objects:', scene.children.map(c => ({
+          type: c.type,
+          name: c.name,
+          position: c.position,
+          visible: c.visible
+        })));
+        loggedOnce = true;
+      }
+      
       scene.traverse((object) => {
-        // Remove any Sprite, Line, Points in center (likely the crosshair)
-        if (
+        // Log and remove any suspicious objects
+        const isNearCenter = object.position.length() < 50;
+        const isSuspicious = 
           object.type === 'Sprite' ||
           object.type === 'Line' ||
           object.type === 'LineSegments' ||
-          object.type === 'Points'
-        ) {
-          // If it's near the origin (center), remove it
-          if (object.position.length() < 50) {
-            object.visible = false;
-            object.parent?.remove(object);
-          }
+          object.type === 'LineLoop' ||
+          object.type === 'Points' ||
+          (object as any).isHelper ||
+          object.type.includes('Helper') ||
+          object.type.includes('Gizmo') ||
+          object.type.includes('Control');
+        
+        if (isSuspicious && isNearCenter) {
+          console.log('❌ Removing:', object.type, object.name);
+          object.visible = false;
+          object.parent?.remove(object);
         }
         
         // Remove any Mesh with BoxGeometry or PlaneGeometry
@@ -38,27 +56,16 @@ function SceneCleaner() {
             mesh.geometry?.type === 'PlaneGeometry' ||
             mesh.geometry?.type === 'PlaneBufferGeometry'
           ) {
-            // Check if it's not a background element
             if (mesh.position.length() < 100) {
+              console.log('❌ Removing Box/Plane:', mesh.name, mesh.position);
               mesh.visible = false;
               mesh.parent?.remove(mesh);
             }
           }
         }
-        
-        // Remove all helpers
-        if (
-          (object as any).isHelper ||
-          object.type.includes('Helper') ||
-          object.type.includes('Gizmo') ||
-          object.type.includes('Control')
-        ) {
-          object.visible = false;
-          object.parent?.remove(object);
-        }
       });
       
-      // Also check gl domElement for any overlays
+      // Force cursor
       const canvas = gl.domElement;
       if (canvas) {
         canvas.style.cursor = 'grab';
