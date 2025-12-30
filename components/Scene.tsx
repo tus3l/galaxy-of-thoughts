@@ -1,7 +1,7 @@
 'use client';
 
-import { Canvas, useThree, useFrame } from '@react-three/fiber';
-import { Suspense, useEffect, useRef } from 'react';
+import { Canvas } from '@react-three/fiber';
+import { Suspense } from 'react';
 import { OrbitControls, Environment } from '@react-three/drei';
 import { EffectComposer, Bloom } from '@react-three/postprocessing';
 import * as THREE from 'three';
@@ -9,78 +9,6 @@ import Galaxy from './Galaxy';
 import ShootingStars from './ShootingStars';
 import BackgroundStars from './BackgroundStars';
 import { StarData } from '@/types';
-
-function SceneCleaner() {
-  const { scene, gl } = useThree();
-  const lastCleanup = useRef(0);
-  
-  useFrame((state) => {
-    // Run cleanup every 0.1 seconds (100ms)
-    const now = state.clock.getElapsedTime();
-    if (now - lastCleanup.current < 0.1) return;
-    lastCleanup.current = now;
-    
-    scene.traverse((object) => {
-      // Remove Points ONLY if it's exactly at origin (the crosshair)
-      if (object.type === 'Points') {
-        const dist = object.position.length();
-        // Only remove if it's VERY close to center (within 2 units)
-        if (dist < 2) {
-          object.visible = false;
-          if (object.parent) {
-            object.parent.remove(object);
-          }
-        }
-      }
-      
-      // Remove any Sprite, Line near center
-      if (
-        object.type === 'Sprite' ||
-        object.type === 'Line' ||
-        object.type === 'LineSegments' ||
-        object.type === 'LineLoop'
-      ) {
-        if (object.position.length() < 5) {
-          object.visible = false;
-          object.parent?.remove(object);
-        }
-      }
-      
-      // Remove any Mesh with BoxGeometry or PlaneGeometry near center
-      if (object.type === 'Mesh') {
-        const mesh = object as THREE.Mesh;
-        if (
-          mesh.geometry?.type === 'BoxGeometry' ||
-          mesh.geometry?.type === 'PlaneGeometry' ||
-          mesh.geometry?.type === 'PlaneBufferGeometry'
-        ) {
-          if (mesh.position.length() < 10) {
-            mesh.visible = false;
-            mesh.parent?.remove(mesh);
-          }
-        }
-      }
-      
-      // Remove all helpers and controls
-      if (
-        (object as any).isHelper ||
-        object.type.includes('Helper') ||
-        object.type.includes('Gizmo') ||
-        object.type.includes('Control')
-      ) {
-        object.visible = false;
-        object.parent?.remove(object);
-      }
-    });
-    
-    // Force cursor
-    if (gl?.domElement) {
-      gl.domElement.style.cursor = 'grab';
-    }
-  });
-  
-  return null;
-}
 
 interface SceneProps {
   onStarClick?: (star: StarData) => void;
@@ -108,8 +36,6 @@ export default function Scene({ onStarClick }: SceneProps) {
       style={{ touchAction: 'none' }}
     >
       <Suspense fallback={null}>
-        <SceneCleaner />
-        
         {/* Deep Space Environment */}
         <color attach="background" args={['#000510']} />
         <fog attach="fog" args={['#000510', 100, 2000]} />
