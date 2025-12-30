@@ -54,9 +54,21 @@ canvas[style] {
   cursor: grab !important;
 }
 
-/* Hide OrbitControls center dot */
+/* Hide OrbitControls center dot and any overlays */
 body * {
   cursor: inherit !important;
+}
+
+/* Force hide any canvas overlays or decorations */
+canvas + * {
+  display: none !important;
+}
+
+/* Hide any absolutely positioned elements over canvas */
+canvas ~ div,
+canvas ~ span {
+  pointer-events: none !important;
+  opacity: 0 !important;
 }
 
 main {
