@@ -29,18 +29,17 @@ export default function Scene({ onStarClick }: SceneProps) {
       style={{ touchAction: 'none' }}
     >
       <Suspense fallback={null}>
-        {/* HDR Environment - Using built-in preset (no external files) */}
+        {/* HDR Environment - Local file in public folder */}
         <Environment 
-          preset="night"
-          background
-          blur={0.8}
-          backgroundIntensity={0.3}
+          files="/space.hdr"
+          background 
+          blur={0.1}
+          backgroundIntensity={0.4}
         />
         
         {/* Enhanced lighting for space atmosphere */}
-        <ambientLight intensity={0.4} />
-        <pointLight position={[10, 10, 10]} intensity={0.8} color="#a0b4ff" />
-        <pointLight position={[-10, -10, -10]} intensity={0.4} color="#4060ff" />
+        <ambientLight intensity={0.3} />
+        <pointLight position={[10, 10, 10]} intensity={0.6} color="#a0b4ff" />
         
         <Galaxy starCount={800} onStarClick={onStarClick} />
 
