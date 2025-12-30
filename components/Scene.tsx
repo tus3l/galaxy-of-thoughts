@@ -1,7 +1,7 @@
 'use client';
 
-import { Canvas } from '@react-three/fiber';
-import { Suspense } from 'react';
+import { Canvas, useThree } from '@react-three/fiber';
+import { Suspense, useEffect } from 'react';
 import { OrbitControls, Environment } from '@react-three/drei';
 import { EffectComposer, Bloom } from '@react-three/postprocessing';
 import * as THREE from 'three';
@@ -9,6 +9,35 @@ import Galaxy from './Galaxy';
 import ShootingStars from './ShootingStars';
 import BackgroundStars from './BackgroundStars';
 import { StarData } from '@/types';
+
+function SceneCleaner() {
+  const { scene, gl } = useThree();
+  
+  useEffect(() => {
+    // Remove any helpers or gizmos
+    scene.traverse((object) => {
+      if (
+        object instanceof THREE.GridHelper ||
+        object instanceof THREE.AxesHelper ||
+        object instanceof THREE.CameraHelper ||
+        object instanceof THREE.BoxHelper ||
+        object instanceof THREE.Box3Helper ||
+        (object as any).isTransformControls ||
+        (object as any).isHelper
+      ) {
+        object.visible = false;
+        if (object.parent) {
+          object.parent.remove(object);
+        }
+      }
+    });
+    
+    // Hide DOM overlay
+    gl.domElement.style.cursor = 'grab';
+  }, [scene, gl]);
+  
+  return null;
+}
 
 interface SceneProps {
   onStarClick?: (star: StarData) => void;
@@ -31,6 +60,8 @@ export default function Scene({ onStarClick }: SceneProps) {
       style={{ touchAction: 'none' }}
     >
       <Suspense fallback={null}>
+        <SceneCleaner />
+        
         {/* Deep Space Environment */}
         <color attach="background" args={['#000510']} />
         <fog attach="fog" args={['#000510', 100, 2000]} />
