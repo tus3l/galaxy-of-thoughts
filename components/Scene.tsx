@@ -16,12 +16,27 @@ function SceneCleaner() {
   useEffect(() => {
     const cleanup = () => {
       scene.traverse((object) => {
+        // Remove any Sprite, Line, Points in center (likely the crosshair)
+        if (
+          object.type === 'Sprite' ||
+          object.type === 'Line' ||
+          object.type === 'LineSegments' ||
+          object.type === 'Points'
+        ) {
+          // If it's near the origin (center), remove it
+          if (object.position.length() < 50) {
+            object.visible = false;
+            object.parent?.remove(object);
+          }
+        }
+        
         // Remove any Mesh with BoxGeometry or PlaneGeometry
         if (object.type === 'Mesh') {
           const mesh = object as THREE.Mesh;
           if (
             mesh.geometry?.type === 'BoxGeometry' ||
-            mesh.geometry?.type === 'PlaneGeometry'
+            mesh.geometry?.type === 'PlaneGeometry' ||
+            mesh.geometry?.type === 'PlaneBufferGeometry'
           ) {
             // Check if it's not a background element
             if (mesh.position.length() < 100) {
@@ -35,12 +50,19 @@ function SceneCleaner() {
         if (
           (object as any).isHelper ||
           object.type.includes('Helper') ||
-          object.type.includes('Gizmo')
+          object.type.includes('Gizmo') ||
+          object.type.includes('Control')
         ) {
           object.visible = false;
           object.parent?.remove(object);
         }
       });
+      
+      // Also check gl domElement for any overlays
+      const canvas = gl.domElement;
+      if (canvas) {
+        canvas.style.cursor = 'grab';
+      }
     };
     
     // Run immediately
