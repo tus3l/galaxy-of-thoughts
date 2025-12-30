@@ -29,16 +29,17 @@ export default function Scene({ onStarClick }: SceneProps) {
       style={{ touchAction: 'none' }}
     >
       <Suspense fallback={null}>
-        {/* HDR Environment - Blue Nebulae from SpaceSphereMaps */}
+        {/* HDR Environment - Space HDRI from Poly Haven (CORS enabled) */}
         <Environment 
-          files="https://www.spacespheremaps.com/wp-content/uploads/HDR_blue_nebulae-1.hdr"
+          files="https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/starmap_2020_1k.hdr"
           background 
-          blur={0.04}
+          blur={0.08}
+          backgroundIntensity={0.5}
         />
         
         {/* Subtle fill lights */}
-        <ambientLight intensity={0.2} />
-        <pointLight position={[10, 10, 10]} intensity={0.5} />
+        <ambientLight intensity={0.3} />
+        <pointLight position={[10, 10, 10]} intensity={0.6} />
         
         <Galaxy starCount={800} onStarClick={onStarClick} />
 
