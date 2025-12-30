@@ -26,6 +26,15 @@ body {
   margin: 0;
 }
 
+/* Hide any default cursor/crosshair */
+canvas {
+  cursor: grab;
+}
+
+canvas:active {
+  cursor: grabbing;
+}
+
 /* Glassmorphism utilities */
 .glass-panel {
   background: rgba(255, 255, 255, 0.05);

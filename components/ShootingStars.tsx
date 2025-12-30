@@ -9,14 +9,14 @@ export default function ShootingStars() {
   
   // Create shooting stars
   const { positions, velocities, reset } = useRef({
-    positions: new Float32Array(15 * 3), // 5 shooting stars
-    velocities: new Float32Array(15 * 3),
+    positions: new Float32Array(45 * 3), // 15 shooting stars
+    velocities: new Float32Array(45 * 3),
     reset: [] as number[]
   }).current;
 
   // Initialize shooting stars
   useRef(() => {
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 15; i++) {
       const i3 = i * 3;
       // Random starting position
       positions[i3] = (Math.random() - 0.5) * 400;
@@ -35,7 +35,7 @@ export default function ShootingStars() {
     
     const positions = starsRef.current.geometry.attributes.position.array as Float32Array;
     
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 15; i++) {
       const i3 = i * 3;
       
       // Update position
@@ -59,16 +59,16 @@ export default function ShootingStars() {
       <bufferGeometry>
         <bufferAttribute
           attach="attributes-position"
-          count={5}
+          count={15}
           array={positions}
           itemSize={3}
         />
       </bufferGeometry>
       <pointsMaterial
-        size={3}
+        size={5}
         color="#ffffff"
         transparent
-        opacity={0.8}
+        opacity={0.9}
         blending={THREE.AdditiveBlending}
         depthWrite={false}
       />
