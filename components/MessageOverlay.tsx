@@ -49,12 +49,7 @@ export default function MessageOverlay({ star, isVisible, onClose }: MessageOver
           {/* Star Icon */}
           <div className="flex items-center justify-center mb-6">
             <div className="text-6xl animate-pulse">
-              {star.color === 'yellow' && '🌟'}
-              {star.color === 'blue' && '🔵'}
-              {star.color === 'purple' && '🟪'}
-              {star.color === 'pink' && '🌸'}
-              {star.color === 'orange' && '🔶'}
-              {!['yellow', 'blue', 'purple', 'pink', 'orange'].includes(star.color) && '⭐'}
+              ⭐
             </div>
           </div>
 
