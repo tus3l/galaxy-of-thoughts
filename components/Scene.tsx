@@ -165,10 +165,10 @@ export default function Scene({ onStarClick, newStarPosition, refreshTrigger }: 
 
         <EffectComposer>
           <Bloom
-            intensity={0.6}
-            luminanceThreshold={0.5}
+            intensity={2.5}
+            luminanceThreshold={0.3}
             luminanceSmoothing={0.9}
-            radius={0.6}
+            radius={0.8}
             mipmapBlur
           />
         </EffectComposer>

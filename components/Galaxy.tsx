@@ -13,6 +13,7 @@ export default function Galaxy({ onStarClick, onStarHover, newStarPosition, refr
   const visibleStarsRef = useRef<number[]>([]);
   const { camera, gl, raycaster, pointer, size } = useThree();
   const [realStars, setRealStars] = useState<StarData[]>([]);
+  const newStarAnimationRef = useRef<{ index: number; startTime: number } | null>(null);
   
   // Fetch real stars from Supabase only
   useEffect(() => {
@@ -170,7 +171,14 @@ export default function Galaxy({ onStarClick, onStarHover, newStarPosition, refr
   
   // Move camera to new star when created
   useEffect(() => {
-    if (newStarPosition) {
+    if (newStarPosition && allStars.length > 0) {
+      // Find the newly created star (last one in the array)
+      const newStarIndex = allStars.length - 1;
+      newStarAnimationRef.current = {
+        index: newStarIndex,
+        startTime: Date.now()
+      };
+      
       const [x, y, z] = newStarPosition;
       // Animate camera to new star position (with offset)
       const targetPos = new THREE.Vector3(x + 30, y + 30, z + 50);
@@ -193,7 +201,7 @@ export default function Galaxy({ onStarClick, onStarHover, newStarPosition, refr
       
       animate();
     }
-  }, [newStarPosition, camera]);
+  }, [newStarPosition, camera, allStars]);
   
   // Show all stars (no limit for now since we only show real ones)
   const maxVisibleStars = Math.max(allStars.length, 10); // At least 10 instances
@@ -255,17 +263,57 @@ export default function Galaxy({ onStarClick, onStarHover, newStarPosition, refr
     const closestStars = starsWithDistance.slice(0, maxVisibleStars);
     // Render all real stars directly
     allStars.forEach((star, i) => {
+      // Explosion/flash animation for new star
+      let explosionScale = 1;
+      let glowIntensity = 1;
+      
+      if (newStarAnimationRef.current && newStarAnimationRef.current.index === i) {
+        const elapsed = Date.now() - newStarAnimationRef.current.startTime;
+        const animDuration = 1500; // 1.5 seconds explosion animation
+        
+        if (elapsed < animDuration) {
+          const progress = elapsed / animDuration;
+          
+          // Phase 1: Explosion (0 - 0.3) - rapid expansion with bright flash
+          if (progress < 0.3) {
+            const phase1 = progress / 0.3;
+            explosionScale = 0.1 + (phase1 * 8); // Scale from 0.1 to 8
+            glowIntensity = 10 - (phase1 * 7); // Intense glow 10 -> 3
+          }
+          // Phase 2: Contraction (0.3 - 0.6) - pull back
+          else if (progress < 0.6) {
+            const phase2 = (progress - 0.3) / 0.3;
+            explosionScale = 8 - (phase2 * 6.5); // Scale from 8 to 1.5
+            glowIntensity = 3 - (phase2 * 1); // Glow 3 -> 2
+          }
+          // Phase 3: Settle (0.6 - 1.0) - smooth to normal
+          else {
+            const phase3 = (progress - 0.6) / 0.4;
+            const easeOut = 1 - Math.pow(1 - phase3, 3);
+            explosionScale = 1.5 - (easeOut * 0); // Stay at 1.5
+            glowIntensity = 2 - (easeOut * 1); // Glow 2 -> 1
+          }
+        } else {
+          // Animation complete
+          newStarAnimationRef.current = null;
+        }
+      }
+      
       // Pulsation effect
       const pulsate = 1 + Math.sin(time * star.speed + i * 0.1) * 0.15;
       
       // Hover effect
       const hoverScale = i === hovered ? 2.0 : 1;
-      const finalScale = (originalScalesRef.current?.[i] || 1.5) * pulsate * hoverScale;
+      const finalScale = (originalScalesRef.current?.[i] || 1.5) * pulsate * hoverScale * explosionScale;
       
       dummy.position.set(...star.position);
       dummy.scale.setScalar(finalScale);
       dummy.updateMatrix();
       meshRef.current!.setMatrixAt(i, dummy.matrix);
+      
+      // Update material emissive intensity for glow effect (if possible via instance)
+      // Note: We can't change per-instance material properties with InstancedMesh
+      // The glow will be implicit from the scale increase
     });
     
     // Update visible stars ref (all stars are visible)
