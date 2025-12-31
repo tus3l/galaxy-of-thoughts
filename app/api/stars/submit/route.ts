@@ -7,16 +7,40 @@ async function moderateContent(text: string): Promise<{ allowed: boolean; reason
   try {
     console.log('🔍 Moderating content:', text.substring(0, 50));
     
+    // Remove spaces and special chars for checking obfuscated words
+    const normalizedText = text.toLowerCase().replace(/[\s\-_\.]/g, '');
+    console.log('Normalized text:', normalizedText.substring(0, 50));
+    
     // FIRST: Basic profanity filter (backup if OpenAI fails)
+    const profanityWords = [
+      'fuck', 'shit', 'bitch', 'damn', 'crap', 'hell', 'bastard', 
+      'dick', 'pussy', 'whore', 'slut', 'cock', 'piss', 'cunt',
+      'fck', 'fuk', 'fuc', 'sht', 'btch', 'dck', 'pss',
+      // Arabic
+      'كس', 'زب', 'عرص', 'خرا', 'شرموط', 'كسمك', 'عرص',
+    ];
+
+    // Check normalized text (catches "f u c k", "f.u.c.k", etc.)
+    for (const word of profanityWords) {
+      if (normalizedText.includes(word)) {
+        console.log('❌ Profanity detected (normalized):', word);
+        return {
+          allowed: false,
+          reason: 'Your message contains inappropriate or offensive language'
+        };
+      }
+    }
+    
+    // Also check with regex patterns for variations
     const profanityPatterns = [
-      /fuck/gi, /shit/gi, /bitch/gi, /ass(?!istant|ume)/gi, /damn/gi,
-      /crap/gi, /hell/gi, /bastard/gi, /dick/gi, /pussy/gi,
-      /whore/gi, /slut/gi, /cock/gi, /piss/gi, /cunt/gi,
-      // With common substitutions
+      /f[\s\-_\.]*u[\s\-_\.]*c[\s\-_\.]*k/gi,
+      /s[\s\-_\.]*h[\s\-_\.]*i[\s\-_\.]*t/gi,
+      /b[\s\-_\.]*i[\s\-_\.]*t[\s\-_\.]*c[\s\-_\.]*h/gi,
+      /d[\s\-_\.]*i[\s\-_\.]*c[\s\-_\.]*k/gi,
+      /a[\s\-_\.]*s[\s\-_\.]*s/gi,
+      /p[\s\-_\.]*u[\s\-_\.]*s[\s\-_\.]*s[\s\-_\.]*y/gi,
       /f+u+c+k+/gi, /s+h+i+t+/gi, /b+i+t+c+h+/gi,
       /f[\*@u]ck/gi, /sh[\*!1i]t/gi, /b[\*!1i]tch/gi,
-      // Arabic profanity
-      /كس/g, /زب/g, /عرص/g, /خرا/g, /شرموط/g,
     ];
 
     for (const pattern of profanityPatterns) {
