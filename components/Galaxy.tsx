@@ -11,7 +11,7 @@ export default function Galaxy({ onStarClick, onStarHover, newStarPosition, refr
   const [hovered, setHovered] = useState<number | null>(null);
   const originalScalesRef = useRef<Float32Array>();
   const visibleStarsRef = useRef<number[]>([]);
-  const { camera } = useThree();
+  const { camera, gl, raycaster, pointer, size } = useThree();
   const [realStars, setRealStars] = useState<StarData[]>([]);
   
   // Fetch real stars from Supabase only
@@ -53,6 +53,68 @@ export default function Galaxy({ onStarClick, onStarHover, newStarPosition, refr
     
     fetchStars();
   }, [refreshTrigger]); // Re-fetch when refreshTrigger changes
+  
+  // Manual click detection with DOM events
+  useEffect(() => {
+    const canvas = gl.domElement;
+    
+    const handleCanvasClick = (event: MouseEvent | TouchEvent) => {
+      console.log('🖱️ Canvas clicked!', event.type);
+      
+      if (!meshRef.current || allStars.length === 0) {
+        console.log('❌ No mesh or stars');
+        return;
+      }
+      
+      // Get click coordinates
+      const rect = canvas.getBoundingClientRect();
+      let clientX: number, clientY: number;
+      
+      if (event instanceof MouseEvent) {
+        clientX = event.clientX;
+        clientY = event.clientY;
+      } else {
+        clientX = event.touches[0]?.clientX || event.changedTouches[0]?.clientX;
+        clientY = event.touches[0]?.clientY || event.changedTouches[0]?.clientY;
+      }
+      
+      // Calculate normalized device coordinates
+      const x = ((clientX - rect.left) / rect.width) * 2 - 1;
+      const y = -((clientY - rect.top) / rect.height) * 2 + 1;
+      
+      console.log('📍 Click coords:', { x, y, clientX, clientY });
+      
+      // Setup raycaster
+      const mouseRaycaster = new THREE.Raycaster();
+      mouseRaycaster.setFromCamera(new THREE.Vector2(x, y), camera);
+      
+      // Check intersection with instancedMesh
+      const intersects = mouseRaycaster.intersectObject(meshRef.current, true);
+      console.log('🎯 Intersections:', intersects.length);
+      
+      if (intersects.length > 0) {
+        const intersection = intersects[0];
+        const instanceId = intersection.instanceId;
+        console.log('✨ Hit star instance:', instanceId);
+        
+        if (instanceId !== undefined && instanceId < allStars.length) {
+          const star = allStars[instanceId];
+          console.log('🌟 Opening star:', star);
+          onStarClick?.(star);
+        }
+      } else {
+        console.log('❌ No intersection');
+      }
+    };
+    
+    canvas.addEventListener('click', handleCanvasClick);
+    canvas.addEventListener('touchend', handleCanvasClick);
+    
+    return () => {
+      canvas.removeEventListener('click', handleCanvasClick);
+      canvas.removeEventListener('touchend', handleCanvasClick);
+    };
+  }, [gl, camera, allStars, onStarClick]);
   
   // Move camera to new star when created
   useEffect(() => {
