@@ -4,14 +4,41 @@ import { useRef, useMemo, useState, useEffect } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { GalaxyProps, StarData } from '@/types';
-import { generateStarData } from '@/lib/utils';
+import { supabase } from '@/lib/supabase';
 
-export default function Galaxy({ starCount = 2000, starData: providedData, onStarClick, onStarHover, newStarPosition }: GalaxyProps & { newStarPosition?: [number, number, number] }) {
+export default function Galaxy({ onStarClick, onStarHover, newStarPosition }: Omit<GalaxyProps, 'starCount' | 'starData'> & { newStarPosition?: [number, number, number] }) {
   const meshRef = useRef<THREE.InstancedMesh>(null);
   const [hovered, setHovered] = useState<number | null>(null);
   const originalScalesRef = useRef<Float32Array>();
   const visibleStarsRef = useRef<number[]>([]);
   const { camera } = useThree();
+  const [realStars, setRealStars] = useState<StarData[]>([]);
+  
+  // Fetch real stars from Supabase only
+  useEffect(() => {
+    const fetchStars = async () => {
+      const { data, error } = await supabase
+        .from('stars')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (data && !error) {
+        const formattedStars: StarData[] = data.map((star, index) => ({
+          id: star.id,
+          position: star.position as [number, number, number],
+          color: new THREE.Color(star.color || '#ffffff'),
+          scale: 1.5,
+          speed: 0.5,
+          message: star.message,
+          author: star.author || 'Anonymous',
+          createdAt: new Date(star.created_at),
+        }));
+        setRealStars(formattedStars);
+      }
+    };
+    
+    fetchStars();
+  }, []);
   
   // Move camera to new star when created
   useEffect(() => {
@@ -40,38 +67,8 @@ export default function Galaxy({ starCount = 2000, starData: providedData, onSta
     }
   }, [newStarPosition, camera]);
   
-  // Move camera to new star when created
-  useEffect(() => {
-    if (newStarPosition) {
-      const [x, y, z] = newStarPosition;
-      // Animate camera to new star position (with offset)
-      const targetPos = new THREE.Vector3(x + 30, y + 30, z + 50);
-      const startPos = camera.position.clone();
-      const duration = 2000; // 2 seconds
-      const startTime = Date.now();
-      
-      const animate = () => {
-        const elapsed = Date.now() - startTime;
-        const progress = Math.min(elapsed / duration, 1);
-        const easeProgress = 1 - Math.pow(1 - progress, 3); // ease out cubic
-        
-        camera.position.lerpVectors(startPos, targetPos, easeProgress);
-        camera.lookAt(x, y, z);
-        
-        if (progress < 1) {
-          requestAnimationFrame(animate);
-        }
-      };
-      
-      animate();
-    }
-  }, [newStarPosition, camera]);
-  
-  // Generate large pool of stars for infinite world
-  const allStars = useMemo(() => 
-    providedData || generateStarData(starCount), 
-    [providedData, starCount]
-  );
+  // Use real stars only
+  const allStars = realStars;
   
   // Show closest 100 stars (increased for better experience)
   const maxVisibleStars = 100;

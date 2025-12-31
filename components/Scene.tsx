@@ -95,7 +95,6 @@ export default function Scene({ onStarClick, newStarPosition }: SceneProps) {
         <BackgroundStars />
         
         <Galaxy 
-          starCount={800} 
           onStarClick={onStarClick}
           newStarPosition={newStarPosition}
         />

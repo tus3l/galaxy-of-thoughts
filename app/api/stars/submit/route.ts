@@ -2,6 +2,68 @@ import { NextRequest, NextResponse } from 'next/server';
 import { submitStar, canUserSubmit } from '@/lib/supabase';
 import { generateRandomPosition } from '@/lib/utils';
 
+// Content moderation function using OpenAI
+async function moderateContent(text: string): Promise<{ allowed: boolean; reason?: string }> {
+  try {
+    // Check for social media patterns (emails, phone numbers, social handles)
+    const socialMediaPatterns = [
+      /\b[\w\.-]+@[\w\.-]+\.\w+\b/gi, // Email
+      /\b\d{10,}\b/g, // Phone numbers
+      /(@|#)\w+/g, // @username or #hashtag
+      /\b(twitter|instagram|facebook|snapchat|tiktok|telegram|whatsapp|discord)[\s:@\/]?\w*/gi,
+      /\b(fb|ig|snap|tt)[\s:@\/]?\w+/gi,
+      /\b(call|text|dm|message)\s*(me|at)?/gi,
+    ];
+
+    for (const pattern of socialMediaPatterns) {
+      if (pattern.test(text)) {
+        return {
+          allowed: false,
+          reason: 'Messages cannot contain contact information, social media handles, or usernames'
+        };
+      }
+    }
+
+    // Use OpenAI Moderation API if key is available
+    if (process.env.OPENAI_API_KEY) {
+      const response = await fetch('https://api.openai.com/v1/moderations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+        },
+        body: JSON.stringify({ input: text }),
+      });
+
+      if (!response.ok) {
+        console.error('OpenAI Moderation API error:', response.status);
+        // Continue without OpenAI if API fails
+        return { allowed: true };
+      }
+
+      const data = await response.json();
+      const result = data.results[0];
+
+      if (result.flagged) {
+        const flaggedCategories = Object.entries(result.categories)
+          .filter(([_, flagged]) => flagged)
+          .map(([category]) => category);
+        
+        return {
+          allowed: false,
+          reason: `Your message contains inappropriate content: ${flaggedCategories.join(', ')}`
+        };
+      }
+    }
+
+    return { allowed: true };
+  } catch (error) {
+    console.error('Content moderation error:', error);
+    // Allow message if moderation fails
+    return { allowed: true };
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { fingerprintId, message } = await request.json();
@@ -21,13 +83,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Content moderation check
+    const moderation = await moderateContent(message);
+    if (!moderation.allowed) {
+      return NextResponse.json(
+        { error: moderation.reason || 'Your message contains inappropriate content' },
+        { status: 400 }
+      );
+    }
+
     // Check 24-hour limit
     const eligibility = await canUserSubmit(fingerprintId);
     
     if (!eligibility.canSubmit) {
       return NextResponse.json(
         {
-          error: 'يمكنك إضافة نجمة واحدة فقط كل 24 ساعة ✨',
+          error: 'You can only add one star every 24 hours ✨',
           remainingTime: eligibility.remainingTime,
         },
         { status: 429 }
@@ -44,7 +115,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       star,
-      message: 'تم إضافة نجمتك إلى المجرة! ✨',
+      message: 'Your star has been added to the galaxy! ✨',
     });
   } catch (error: any) {
     console.error('Error submitting star:', error);
