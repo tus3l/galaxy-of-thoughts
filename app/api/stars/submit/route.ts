@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { submitStar, canUserSubmit } from '@/lib/supabase';
+import { submitStar, canUserSubmit, supabase } from '@/lib/supabase';
 import { generateRandomPosition } from '@/lib/utils';
 
 // Content moderation function using OpenAI
@@ -108,8 +108,36 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate random position for the star
-    const position = generateRandomPosition(150);
+    // Generate random position with collision detection
+    let position: [number, number, number];
+    let attempts = 0;
+    const maxAttempts = 10;
+    const minDistance = 15; // Minimum distance between stars
+
+    // Get all existing star positions
+    const { data: existingStars } = await supabase
+      .from('stars')
+      .select('position_x, position_y, position_z');
+
+    const existingPositions = existingStars?.map(s => [s.position_x, s.position_y, s.position_z]) || [];
+
+    // Try to find a position that doesn't collide
+    do {
+      position = generateRandomPosition(200);
+      attempts++;
+      
+      // Check if position is far enough from all existing stars
+      const isTooClose = existingPositions.some(existing => {
+        const dx = position[0] - existing[0];
+        const dy = position[1] - existing[1];
+        const dz = position[2] - existing[2];
+        const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        return distance < minDistance;
+      });
+
+      if (!isTooClose) break;
+    } while (attempts < maxAttempts);
+
     const color = '#ffffff'; // All stars are white
 
     // Submit to database

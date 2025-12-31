@@ -43,15 +43,20 @@ export function generateStarData(count: number): StarData[] {
 
 /**
  * Generates a random position in 3D space within galaxy bounds
+ * with better distribution and collision avoidance
  */
-export function generateRandomPosition(radius: number = 150): Vector3Tuple {
-  const theta = Math.random() * Math.PI * 2;
-  const phi = Math.acos((Math.random() * 2) - 1);
-  const r = 30 + Math.random() * radius;
+export function generateRandomPosition(radius: number = 200): Vector3Tuple {
+  // Use spherical coordinates for better 3D distribution
+  const theta = Math.random() * Math.PI * 2; // Angle around Y-axis (0 to 2π)
+  const phi = Math.acos((Math.random() * 2) - 1); // Angle from Y-axis (0 to π)
+  
+  // Random radius with better distribution (closer stars more likely)
+  const r = 50 + Math.pow(Math.random(), 0.7) * radius;
 
+  // Convert spherical to Cartesian coordinates
   const x = r * Math.sin(phi) * Math.cos(theta);
-  const y = (Math.random() - 0.5) * 80;
-  const z = r * Math.sin(phi) * Math.sin(theta);
+  const y = r * Math.sin(phi) * Math.sin(theta);
+  const z = r * Math.cos(phi);
 
   return [x, y, z];
 }
