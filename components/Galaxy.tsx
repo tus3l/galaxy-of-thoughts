@@ -14,6 +14,7 @@ export default function Galaxy({ onStarClick, onStarHover, newStarPosition, refr
   const { camera, gl, raycaster, pointer, size } = useThree();
   const [realStars, setRealStars] = useState<StarData[]>([]);
   const newStarAnimationRef = useRef<{ index: number; startTime: number } | null>(null);
+  const instanceColorsRef = useRef<Float32Array>();
   
   // Fetch real stars from Supabase only
   useEffect(() => {
@@ -219,10 +220,28 @@ export default function Galaxy({ onStarClick, onStarHover, newStarPosition, refr
   // Show all stars (no limit for now since we only show real ones)
   const maxVisibleStars = Math.max(allStars.length, 10); // At least 10 instances
   
-  // Store original scales
+  // Store original scales and colors
   useEffect(() => {
     if (allStars.length > 0) {
       originalScalesRef.current = new Float32Array(allStars.map(s => s.scale));
+      
+      // Create color array for instances (RGB for each star)
+      const colors = new Float32Array(allStars.length * 3);
+      allStars.forEach((star, i) => {
+        const color = star.color || new THREE.Color('#ffffff');
+        colors[i * 3] = color.r;
+        colors[i * 3 + 1] = color.g;
+        colors[i * 3 + 2] = color.b;
+      });
+      instanceColorsRef.current = colors;
+      
+      // Apply colors to geometry
+      if (meshRef.current && meshRef.current.geometry) {
+        meshRef.current.geometry.setAttribute(
+          'color',
+          new THREE.InstancedBufferAttribute(colors, 3)
+        );
+      }
     }
   }, [allStars]);
   
@@ -403,7 +422,7 @@ export default function Galaxy({ onStarClick, onStarHover, newStarPosition, refr
     >
       <sphereGeometry args={[4, 16, 16]} />
       <meshStandardMaterial 
-        color="#ffffff"
+        vertexColors
         emissive="#ffffff"
         emissiveIntensity={2.5}
         transparent
