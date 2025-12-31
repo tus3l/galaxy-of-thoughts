@@ -23,16 +23,34 @@ export default function Galaxy({ onStarClick, onStarHover, newStarPosition }: Om
         .order('created_at', { ascending: false });
       
       if (data && !error) {
-        const formattedStars: StarData[] = data.map((star, index) => ({
-          id: star.id,
-          position: star.position as [number, number, number],
-          color: new THREE.Color(star.color || '#ffffff'),
-          scale: 1.5,
-          speed: 0.5,
-          message: star.message,
-          author: star.author || 'Anonymous',
-          createdAt: new Date(star.created_at),
-        }));
+        const formattedStars: StarData[] = data
+          .filter(star => star.position) // Filter out stars without position
+          .map((star, index) => {
+            // Parse position if it's a string
+            let position: [number, number, number];
+            if (typeof star.position === 'string') {
+              try {
+                position = JSON.parse(star.position);
+              } catch {
+                position = [0, 0, 0];
+              }
+            } else if (Array.isArray(star.position)) {
+              position = star.position as [number, number, number];
+            } else {
+              position = [0, 0, 0];
+            }
+            
+            return {
+              id: star.id,
+              position,
+              color: new THREE.Color(star.color || '#ffffff'),
+              scale: 1.5,
+              speed: 0.5,
+              message: star.message,
+              author: star.author || 'Anonymous',
+              createdAt: new Date(star.created_at),
+            };
+          });
         setRealStars(formattedStars);
       }
     };
