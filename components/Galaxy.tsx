@@ -22,7 +22,7 @@ export default function Galaxy({ onStarClick, onStarHover, newStarPosition, refr
       const { data, error } = await supabase
         .from('stars')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('id', { ascending: true }); // Order by ID so Star #0 is first
       
       if (data && !error) {
         const formattedStars: StarData[] = data
