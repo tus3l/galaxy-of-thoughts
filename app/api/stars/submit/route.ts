@@ -5,76 +5,7 @@ import { generateRandomPosition } from '@/lib/utils';
 // Content moderation function using OpenAI
 async function moderateContent(text: string): Promise<{ allowed: boolean; reason?: string }> {
   try {
-    // Detect encoding/obfuscation attempts
-    const suspiciousPatterns = [
-      /[a-z0-9]{20,}/gi, // Long strings without spaces (possible encoding)
-      /[\u200B-\u200D\uFEFF]/g, // Zero-width characters
-      /[^\x00-\x7F]{15,}/g, // Too many non-ASCII characters
-      /(.)\1{10,}/g, // Repeated characters (aaaaaaaa)
-      /[^\w\s\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF.,!?'\"-]{5,}/gi, // Too many special symbols
-    ];
-
-    for (const pattern of suspiciousPatterns) {
-      if (pattern.test(text)) {
-        return {
-          allowed: false,
-          reason: 'Messages cannot contain encoded text, excessive symbols, or obfuscated content'
-        };
-      }
-    }
-
-    // Check for social media patterns (emails, phone numbers, social handles)
-    const socialMediaPatterns = [
-      /\b[\w\.-]+@[\w\.-]+\.\w+\b/gi, // Email
-      /\b[\w\.-]+\s*@\s*[\w\.-]+\s*\.\s*\w+\b/gi, // Email with spaces
-      /\b\d{10,}\b/g, // Phone numbers
-      /\b\d[\s\.-]*\d[\s\.-]*\d[\s\.-]*\d[\s\.-]*\d[\s\.-]*\d[\s\.-]*\d[\s\.-]*\d[\s\.-]*\d[\s\.-]*\d/g, // Phone with separators
-      /(@|#)\w+/g, // @username or #hashtag
-      /\b(twitter|instagram|facebook|snapchat|tiktok|telegram|whatsapp|discord|youtube|linkedin)[\s:@\/]?\w*/gi,
-      /\b(fb|ig|snap|tt|yt|twt)[\s:@\/]?\w+/gi,
-      /\b(call|text|dm|message|contact|reach|whatsapp|snap)\s*(me|at)?/gi,
-      /\b(add\s+me|follow\s+me|dm\s+me)/gi,
-      /\b(www\.|http|\.com|\.net|\.org|\.io)/gi, // URLs
-    ];
-
-    for (const pattern of socialMediaPatterns) {
-      if (pattern.test(text)) {
-        return {
-          allowed: false,
-          reason: 'Messages cannot contain contact information, social media handles, usernames, or URLs'
-        };
-      }
-    }
-
-    // Explicit profanity check (before OpenAI)
-    const profanityList = [
-      /\bf+u+c+k+/gi,
-      /\bs+h+i+t+/gi,
-      /\bb+i+t+c+h+/gi,
-      /\ba+s+s+h+o+l+e+/gi,
-      /\bd+a+m+n+/gi,
-      /\bc+r+a+p+/gi,
-      /\bp+o+r+n+/gi,
-      /\bs+e+x+/gi,
-      /\bd+i+c+k+/gi,
-      /\bp+u+s+s+y+/gi,
-      // Add common character substitutions
-      /f[u\*@]ck/gi,
-      /sh[i!1\*]t/gi,
-      /b[i!1\*]tch/gi,
-      /[a@\*]ss/gi,
-    ];
-
-    for (const word of profanityList) {
-      if (word.test(text)) {
-        return {
-          allowed: false,
-          reason: 'Your message contains inappropriate or offensive language'
-        };
-      }
-    }
-
-    // Use OpenAI Moderation API if key is available
+    // 1. Use OpenAI Moderation API first for profanity/inappropriate content
     if (process.env.OPENAI_API_KEY) {
       const response = await fetch('https://api.openai.com/v1/moderations', {
         method: 'POST',
@@ -101,7 +32,50 @@ async function moderateContent(text: string): Promise<{ allowed: boolean; reason
         
         return {
           allowed: false,
-          reason: `Your message contains inappropriate content: ${flaggedCategories.join(', ')}`
+          reason: `Your message contains inappropriate content detected by AI: ${flaggedCategories.join(', ')}`
+        };
+      }
+    } else {
+      console.warn('OpenAI API key not configured - AI moderation disabled');
+    }
+
+    // 2. Detect encoding/obfuscation attempts
+    const suspiciousPatterns = [
+      /[a-z0-9]{25,}/gi, // Long strings without spaces (possible encoding)
+      /[\u200B-\u200D\uFEFF]/g, // Zero-width characters
+      /[^\x00-\x7F]{20,}/g, // Too many non-ASCII characters
+      /(.)\1{10,}/g, // Repeated characters (aaaaaaaa)
+      /[^\w\s\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF.,!?'\"-]{8,}/gi, // Too many special symbols
+    ];
+
+    for (const pattern of suspiciousPatterns) {
+      if (pattern.test(text)) {
+        return {
+          allowed: false,
+          reason: 'Messages cannot contain encoded text, excessive symbols, or obfuscated content'
+        };
+      }
+    }
+
+    // 3. Check for social media patterns (emails, phone numbers, social handles)
+    const socialMediaPatterns = [
+      /\b[\w\.-]+@[\w\.-]+\.\w+\b/gi, // Email
+      /\b[\w\.-]+\s*@\s*[\w\.-]+\s*\.\s*\w+\b/gi, // Email with spaces
+      /\b\d{10,}\b/g, // Phone numbers
+      /\b\d[\s\.-]*\d[\s\.-]*\d[\s\.-]*\d[\s\.-]*\d[\s\.-]*\d[\s\.-]*\d[\s\.-]*\d[\s\.-]*\d[\s\.-]*\d/g, // Phone with separators
+      /(@|#)\w+/g, // @username or #hashtag
+      /\b(twitter|instagram|facebook|snapchat|tiktok|telegram|whatsapp|discord|youtube|linkedin)[\s:@\/]?\w*/gi,
+      /\b(fb|ig|snap|tt|yt|twt)[\s:@\/]?\w+/gi,
+      /\b(call|text|dm|message|contact|reach|whatsapp|snap)\s*(me|at)?/gi,
+      /\b(add\s+me|follow\s+me|dm\s+me)/gi,
+      /\b(www\.|http|\.com|\.net|\.org|\.io)/gi, // URLs
+    ];
+
+    for (const pattern of socialMediaPatterns) {
+      if (pattern.test(text)) {
+        return {
+          allowed: false,
+          reason: 'Messages cannot contain contact information, social media handles, usernames, or URLs'
         };
       }
     }
