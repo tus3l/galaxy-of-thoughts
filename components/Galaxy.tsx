@@ -87,13 +87,62 @@ export default function Galaxy({ onStarClick, onStarHover, newStarPosition, refr
       
       console.log('📍 Click coords:', { x, y, clientX, clientY });
       
+      // Make sure instanceMatrix is updated
+      if (meshRef.current.instanceMatrix.needsUpdate === false) {
+        console.log('⚠️ instanceMatrix needs update!');
+        meshRef.current.instanceMatrix.needsUpdate = true;
+      }
+      
+      // Update bounding sphere for raycasting
+      if (meshRef.current.geometry.boundingSphere === null) {
+        meshRef.current.geometry.computeBoundingSphere();
+        console.log('🔵 Computing bounding sphere');
+      }
+      
+      console.log('📏 Mesh info:', {
+        position: meshRef.current.position,
+        visible: meshRef.current.visible,
+        instanceCount: allStars.length,
+        boundingSphere: meshRef.current.geometry.boundingSphere
+      });
+      
       // Setup raycaster
       const mouseRaycaster = new THREE.Raycaster();
+      // Increase raycaster threshold for easier clicking
+      mouseRaycaster.params.Points = { threshold: 5 };
       mouseRaycaster.setFromCamera(new THREE.Vector2(x, y), camera);
       
       // Check intersection with instancedMesh
-      const intersects = mouseRaycaster.intersectObject(meshRef.current, true);
+      const intersects = mouseRaycaster.intersectObject(meshRef.current, false);
       console.log('🎯 Intersections:', intersects.length);
+      
+      if (intersects.length === 0) {
+        console.log('🔍 Debugging: Testing ray direction and camera');
+        console.log('Camera position:', camera.position);
+        console.log('Ray origin:', mouseRaycaster.ray.origin);
+        console.log('Ray direction:', mouseRaycaster.ray.direction);
+        
+        // Try to check all stars manually
+        const sphereGeometry = new THREE.SphereGeometry(4, 16, 16);
+        let closestDistance = Infinity;
+        let closestIndex = -1;
+        
+        allStars.forEach((star, index) => {
+          const starPos = new THREE.Vector3(...star.position);
+          const distance = mouseRaycaster.ray.distanceToPoint(starPos);
+          console.log(`Star ${index} at`, star.position, 'distance to ray:', distance);
+          if (distance < closestDistance && distance < 10) {
+            closestDistance = distance;
+            closestIndex = index;
+          }
+        });
+        
+        if (closestIndex >= 0) {
+          console.log('🎯 Found closest star manually!', closestIndex);
+          onStarClick?.(allStars[closestIndex]);
+          return;
+        }
+      }
       
       if (intersects.length > 0) {
         const intersection = intersects[0];
