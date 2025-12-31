@@ -5,11 +5,11 @@ import "./globals.css";
 export const metadata: Metadata = {
   metadataBase: new URL('https://star-thoughts.space'),
   title: {
-    default: "Galaxy of Thoughts - مجرة الأفكار",
+    default: "Galaxy of Thoughts",
     template: "%s | Galaxy of Thoughts"
   },
-  description: "كون ثلاثي الأبعاد حيث كل نجمة تمثل فكرة. استكشف مجرة الخيال الإنساني ودع بصمتك في الفضاء.",
-  keywords: ["galaxy", "thoughts", "3D universe", "مجرة الأفكار", "أفكار", "فضاء", "نجوم", "interactive", "cosmos"],
+  description: "A 3D universe where every star represents a thought. Explore the cosmos of human imagination and leave your mark in space.",
+  keywords: ["galaxy", "thoughts", "3D universe", "interactive", "cosmos", "stars", "ideas", "space", "visualization"],
   authors: [{ name: "Galaxy of Thoughts" }],
   creator: "Galaxy of Thoughts",
   publisher: "Galaxy of Thoughts",
@@ -20,11 +20,10 @@ export const metadata: Metadata = {
   },
   openGraph: {
     type: "website",
-    locale: "ar_SA",
-    alternateLocale: ["en_US"],
+    locale: "en_US",
     url: "https://star-thoughts.space",
-    title: "Galaxy of Thoughts - مجرة الأفكار",
-    description: "كون ثلاثي الأبعاد حيث كل نجمة تمثل فكرة. استكشف مجرة الخيال الإنساني.",
+    title: "Galaxy of Thoughts",
+    description: "A 3D universe where every star represents a thought. Explore the cosmos of human imagination.",
     siteName: "Galaxy of Thoughts",
     images: [
       {
@@ -37,8 +36,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Galaxy of Thoughts - مجرة الأفكار",
-    description: "كون ثلاثي الأبعاد حيث كل نجمة تمثل فكرة",
+    title: "Galaxy of Thoughts",
+    description: "A 3D universe where every star represents a thought",
     images: ["/og-image.png"],
   },
   robots: {
@@ -68,7 +67,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ar" dir="rtl">
+    <html lang="en" dir="ltr">
       <head>
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -81,7 +80,6 @@ export default function RootLayout({
               '@context': 'https://schema.org',
               '@type': 'WebApplication',
               name: 'Galaxy of Thoughts',
-              alternateName: 'مجرة الأفكار',
               description: 'A 3D universe where every star represents a thought',
               url: 'https://star-thoughts.space',
               applicationCategory: 'EntertainmentApplication',
