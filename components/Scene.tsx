@@ -114,12 +114,17 @@ export default function Scene({ onStarClick, newStarPosition }: SceneProps) {
             ONE: THREE.TOUCH.ROTATE,
             TWO: THREE.TOUCH.DOLLY_PAN
           }}
-          enablePan={false}
-          panSpeed={0.5}
-          makeDefault={false}
+          enablePan={true}
+          panSpeed={0.3}
+          makeDefault={true}
           screenSpacePanning={false}
           target={[0, 0, 0]}
           regress={false}
+          mouseButtons={{
+            LEFT: THREE.MOUSE.ROTATE,
+            MIDDLE: THREE.MOUSE.DOLLY,
+            RIGHT: THREE.MOUSE.PAN
+          }}
         />
 
         <EffectComposer>

@@ -33,9 +33,9 @@ export default function MessageOverlay({ star, isVisible, onClose }: MessageOver
       />
       
       {/* Message Panel */}
-      <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
+      <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none p-4">
         <div 
-          className="glass-panel max-w-2xl w-full mx-8 p-8 pointer-events-auto fade-in"
+          className="glass-panel max-w-2xl w-full mx-4 p-4 md:mx-8 md:p-8 pointer-events-auto fade-in max-h-[90vh] overflow-y-auto"
           style={{ animationDelay: '0.1s' }}
         >
           {/* Close Button */}

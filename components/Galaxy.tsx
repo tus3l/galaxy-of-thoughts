@@ -208,9 +208,16 @@ export default function Galaxy({ onStarClick, onStarHover, newStarPosition }: Om
       ref={meshRef}
       args={[undefined, undefined, maxVisibleStars]}
       onClick={handleClick}
+      onPointerDown={handleClick}
       onPointerMove={handlePointerMove}
       onPointerOut={handlePointerOut}
       frustumCulled={false}
+      raycast={(raycaster, intersects) => {
+        // Custom raycast for better touch/click detection
+        if (meshRef.current) {
+          meshRef.current.raycast(raycaster, intersects);
+        }
+      }}
     >
       <sphereGeometry args={[2.5, 24, 24]} />
       <meshStandardMaterial 

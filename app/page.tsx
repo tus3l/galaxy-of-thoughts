@@ -37,6 +37,7 @@ export default function Home() {
   }, []);
 
   const handleStarClick = (star: StarData) => {
+    console.log('👆 Star clicked in page.tsx:', star);
     setSelectedStar(star);
     setIsOverlayVisible(true);
   };
