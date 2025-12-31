@@ -171,14 +171,24 @@ export default function Galaxy({ onStarClick, onStarHover, newStarPosition, refr
 
   // Interaction handlers
   const handleClick = (event: any) => {
+    console.log('👆 Click event received:', event);
     event.stopPropagation();
     const instanceId = event.instanceId;
     console.log('🖱️ Clicked instance:', instanceId, 'Total stars:', allStars.length);
+    console.log('📍 Event details:', {
+      instanceId,
+      point: event.point,
+      distance: event.distance,
+      object: event.object?.type
+    });
     
     if (instanceId !== undefined && instanceId < allStars.length) {
       const star = allStars[instanceId];
       console.log('✨ Clicked star:', star);
+      console.log('📞 Calling onStarClick with star data');
       onStarClick?.(star);
+    } else {
+      console.log('❌ Invalid instanceId or out of range');
     }
   };
 
@@ -208,12 +218,16 @@ export default function Galaxy({ onStarClick, onStarHover, newStarPosition, refr
       ref={meshRef}
       args={[undefined, undefined, maxVisibleStars]}
       onClick={handleClick}
-      onPointerDown={handleClick}
+      onPointerDown={(e) => {
+        console.log('👇 Pointer down on star');
+        e.stopPropagation();
+      }}
+      onPointerUp={handleClick}
       onPointerMove={handlePointerMove}
       onPointerOut={handlePointerOut}
       frustumCulled={false}
     >
-      <sphereGeometry args={[2.5, 24, 24]} />
+      <sphereGeometry args={[4, 16, 16]} />
       <meshStandardMaterial 
         color="#ffffff"
         emissive="#ffffff"
