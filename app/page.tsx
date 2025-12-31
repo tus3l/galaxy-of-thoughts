@@ -19,6 +19,7 @@ export default function Home() {
   const [isAddStarModalVisible, setIsAddStarModalVisible] = useState(false);
   const [totalStars, setTotalStars] = useState<number>(0);
   const [newStarPosition, setNewStarPosition] = useState<[number, number, number] | undefined>(undefined);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // Fetch total stars count
   const fetchStarsCount = async () => {
@@ -58,14 +59,16 @@ export default function Home() {
       // Refresh stars count
       fetchStarsCount();
       
-      // Reload after camera animation completes (3 seconds)
+      // Trigger Galaxy to reload stars after animation completes
       setTimeout(() => {
-        window.location.reload();
-      }, 3000);
+        console.log('✨ Refreshing stars list...');
+        setRefreshTrigger(prev => prev + 1);
+      }, 3500);
     } else {
       console.error('❌ No position in star data:', star);
-      // Fallback: just reload
-      window.location.reload();
+      // Refresh manually if no position
+      fetchStarsCount();
+      setRefreshTrigger(prev => prev + 1);
     }
   };
 
@@ -75,6 +78,7 @@ export default function Home() {
         <Scene 
           onStarClick={handleStarClick}
           newStarPosition={newStarPosition}
+          refreshTrigger={refreshTrigger}
         />
       </Suspense>
       

@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import { GalaxyProps, StarData } from '@/types';
 import { supabase } from '@/lib/supabase';
 
-export default function Galaxy({ onStarClick, onStarHover, newStarPosition }: Omit<GalaxyProps, 'starCount' | 'starData'> & { newStarPosition?: [number, number, number] }) {
+export default function Galaxy({ onStarClick, onStarHover, newStarPosition, refreshTrigger }: Omit<GalaxyProps, 'starCount' | 'starData'> & { newStarPosition?: [number, number, number], refreshTrigger?: number }) {
   const meshRef = useRef<THREE.InstancedMesh>(null);
   const [hovered, setHovered] = useState<number | null>(null);
   const originalScalesRef = useRef<Float32Array>();
@@ -52,7 +52,7 @@ export default function Galaxy({ onStarClick, onStarHover, newStarPosition }: Om
     };
     
     fetchStars();
-  }, []);
+  }, [refreshTrigger]); // Re-fetch when refreshTrigger changes
   
   // Move camera to new star when created
   useEffect(() => {

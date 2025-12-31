@@ -48,9 +48,10 @@ function CrosshairRemover() {
 interface SceneProps {
   onStarClick?: (star: StarData) => void;
   newStarPosition?: [number, number, number];
+  refreshTrigger?: number;
 }
 
-export default function Scene({ onStarClick, newStarPosition }: SceneProps) {
+export default function Scene({ onStarClick, newStarPosition, refreshTrigger }: SceneProps) {
   // Random camera position at start
   const randomX = (Math.random() - 0.5) * 400;
   const randomY = (Math.random() - 0.5) * 400;
@@ -97,6 +98,7 @@ export default function Scene({ onStarClick, newStarPosition }: SceneProps) {
         <Galaxy 
           onStarClick={onStarClick}
           newStarPosition={newStarPosition}
+          refreshTrigger={refreshTrigger}
         />
         
         {/* Shooting stars for beauty */}
