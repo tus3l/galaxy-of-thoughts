@@ -1,7 +1,7 @@
 'use client';
 
 import { Canvas, useThree, useFrame } from '@react-three/fiber';
-import { Suspense, useRef } from 'react';
+import { Suspense, useRef, useEffect } from 'react';
 import { OrbitControls, Environment } from '@react-three/drei';
 import { EffectComposer, Bloom } from '@react-three/postprocessing';
 import * as THREE from 'three';
@@ -49,6 +49,63 @@ interface SceneProps {
   onStarClick?: (star: StarData) => void;
   newStarPosition?: [number, number, number];
   refreshTrigger?: number;
+}
+
+// Component to update OrbitControls target
+function CameraController({ newStarPosition }: { newStarPosition?: [number, number, number] }) {
+  const controlsRef = useRef<any>(null);
+  
+  useEffect(() => {
+    if (newStarPosition && controlsRef.current) {
+      const [x, y, z] = newStarPosition;
+      const targetPos = new THREE.Vector3(x, y, z);
+      const startTarget = controlsRef.current.target.clone();
+      const duration = 2000;
+      const startTime = Date.now();
+      
+      const animate = () => {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const easeProgress = 1 - Math.pow(1 - progress, 3);
+        
+        controlsRef.current.target.lerpVectors(startTarget, targetPos, easeProgress);
+        controlsRef.current.update();
+        
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        }
+      };
+      
+      animate();
+    }
+  }, [newStarPosition]);
+  
+  return (
+    <OrbitControls
+      ref={controlsRef}
+      enableDamping
+      dampingFactor={0.05}
+      rotateSpeed={0.5}
+      enableZoom={true}
+      zoomSpeed={0.8}
+      minDistance={20}
+      maxDistance={2000}
+      touches={{
+        ONE: THREE.TOUCH.ROTATE,
+        TWO: THREE.TOUCH.DOLLY_PAN
+      }}
+      enablePan={true}
+      panSpeed={0.3}
+      makeDefault={false}
+      screenSpacePanning={false}
+      regress={false}
+      mouseButtons={{
+        LEFT: THREE.MOUSE.ROTATE,
+        MIDDLE: THREE.MOUSE.DOLLY,
+        RIGHT: THREE.MOUSE.PAN
+      }}
+    />
+  );
 }
 
 export default function Scene({ onStarClick, newStarPosition, refreshTrigger }: SceneProps) {
@@ -104,30 +161,7 @@ export default function Scene({ onStarClick, newStarPosition, refreshTrigger }: 
         {/* Shooting stars for beauty */}
         <ShootingStars />
 
-        <OrbitControls
-          enableDamping
-          dampingFactor={0.05}
-          rotateSpeed={0.5}
-          enableZoom={true}
-          zoomSpeed={0.8}
-          minDistance={20}
-          maxDistance={2000}
-          touches={{
-            ONE: THREE.TOUCH.ROTATE,
-            TWO: THREE.TOUCH.DOLLY_PAN
-          }}
-          enablePan={true}
-          panSpeed={0.3}
-          makeDefault={false}
-          screenSpacePanning={false}
-          target={[0, 0, 0]}
-          regress={false}
-          mouseButtons={{
-            LEFT: THREE.MOUSE.ROTATE,
-            MIDDLE: THREE.MOUSE.DOLLY,
-            RIGHT: THREE.MOUSE.PAN
-          }}
-        />
+        <CameraController newStarPosition={newStarPosition} />
 
         <EffectComposer>
           <Bloom
