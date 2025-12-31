@@ -1,0 +1,39 @@
+{
+  "name": "Galaxy of Thoughts",
+  "short_name": "Galaxy",
+  "description": "Share your thoughts in an interactive 3D galaxy",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["entertainment", "art", "social"],
+  "shortcuts": [
+    {
+      "name": "Add Star",
+      "short_name": "Add",
+      "description": "Add your thought to the galaxy",
+      "url": "/?action=add",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ]
+}
