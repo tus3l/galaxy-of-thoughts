@@ -436,7 +436,8 @@ export default function Galaxy({ onStarClick, onStarHover, newStarPosition, refr
       <meshStandardMaterial 
         vertexColors
         emissive="#ffffff"
-        emissiveIntensity={2.5}
+        emissiveIntensity={1.5}
+        color="#ffffff"
         transparent
         toneMapped={false}
         depthWrite={true}
