@@ -114,7 +114,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      star,
+      star: {
+        ...star,
+        position, // Include position for camera animation
+      },
       message: 'Your star has been added to the galaxy! ✨',
     });
   } catch (error: any) {
