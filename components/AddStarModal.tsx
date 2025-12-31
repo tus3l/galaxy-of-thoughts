@@ -116,14 +116,14 @@ export default function AddStarModal({ isVisible, onClose, onSuccess }: AddStarM
     <>
       {/* Backdrop */}
       <div 
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 fade-in"
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] fade-in"
         onClick={handleClose}
       />
       
       {/* Modal */}
-      <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none p-4">
+      <div className="fixed inset-0 flex items-center justify-center z-[101] pointer-events-none p-4 overflow-y-auto">
         <div 
-          className="glass-panel max-w-2xl w-full p-6 md:p-8 pointer-events-auto fade-in"
+          className="glass-panel max-w-2xl w-full p-4 sm:p-6 md:p-8 pointer-events-auto fade-in my-4"
           style={{ animationDelay: '0.1s' }}
         >
           {/* Close Button */}
@@ -196,11 +196,11 @@ export default function AddStarModal({ isVisible, onClose, onSuccess }: AddStarM
                 </span>
               </div>
 
-              <div className="flex gap-3">
+              <div className="flex gap-2 sm:gap-3">
                 <button
                   type="button"
                   onClick={handleClose}
-                  className="flex-1 px-6 py-3 bg-white/5 hover:bg-white/10 text-white rounded-lg transition-all duration-300"
+                  className="flex-1 px-4 sm:px-6 py-3 text-sm sm:text-base bg-white/5 hover:bg-white/10 active:bg-white/20 text-white rounded-lg transition-all duration-300 touch-manipulation"
                   disabled={isSubmitting}
                 >
                   Cancel
@@ -208,7 +208,7 @@ export default function AddStarModal({ isVisible, onClose, onSuccess }: AddStarM
                 <button
                   type="submit"
                   disabled={isSubmitting || message.length < 10}
-                  className="flex-1 px-6 py-3 bg-gradient-to-r from-yellow-400 to-orange-400 hover:from-yellow-500 hover:to-orange-500 text-black font-semibold rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 px-4 sm:px-6 py-3 text-sm sm:text-base bg-gradient-to-r from-yellow-400 to-orange-400 hover:from-yellow-500 hover:to-orange-500 active:from-yellow-600 active:to-orange-600 text-black font-semibold rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
                 >
                   {isSubmitting ? 'Adding...' : '✨ Launch Star'}
                 </button>

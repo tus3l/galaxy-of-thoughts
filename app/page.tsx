@@ -51,24 +51,26 @@ export default function Home() {
   const handleAddStarSuccess = (star?: any) => {
     console.log('🌟 New star data:', star);
     
+    // Update counter immediately
+    setStarsCount(prev => prev + 1);
+    
     // Set new star position to animate camera
     if (star && star.position) {
       console.log('📍 Moving camera to:', star.position);
       setNewStarPosition(star.position);
       
-      // Refresh stars count
-      fetchStarsCount();
-      
       // Trigger Galaxy to reload stars after animation completes
       setTimeout(() => {
         console.log('✨ Refreshing stars list...');
         setRefreshTrigger(prev => prev + 1);
+        // Fetch actual count to ensure sync
+        fetchStarsCount();
       }, 3500);
     } else {
       console.error('❌ No position in star data:', star);
       // Refresh manually if no position
-      fetchStarsCount();
       setRefreshTrigger(prev => prev + 1);
+      fetchStarsCount();
     }
   };
 
