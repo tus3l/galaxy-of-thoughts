@@ -222,28 +222,40 @@ export default function Galaxy({ onStarClick, onStarHover, newStarPosition, refr
   
   // Store original scales and colors
   useEffect(() => {
-    if (allStars.length > 0) {
+    if (allStars.length > 0 && meshRef.current) {
       originalScalesRef.current = new Float32Array(allStars.map(s => s.scale));
       
       // Create color array for instances (RGB for each star)
-      const colors = new Float32Array(allStars.length * 3);
+      const colors = new Float32Array(maxVisibleStars * 3);
       allStars.forEach((star, i) => {
         const color = star.color || new THREE.Color('#ffffff');
         colors[i * 3] = color.r;
         colors[i * 3 + 1] = color.g;
         colors[i * 3 + 2] = color.b;
+        console.log(`🎨 Star ${i} color:`, star.color?.getHexString());
       });
+      
+      // Fill remaining slots with white
+      for (let i = allStars.length; i < maxVisibleStars; i++) {
+        colors[i * 3] = 1;
+        colors[i * 3 + 1] = 1;
+        colors[i * 3 + 2] = 1;
+      }
+      
       instanceColorsRef.current = colors;
       
       // Apply colors to geometry
-      if (meshRef.current && meshRef.current.geometry) {
-        meshRef.current.geometry.setAttribute(
+      const geometry = meshRef.current.geometry;
+      if (geometry) {
+        geometry.setAttribute(
           'color',
           new THREE.InstancedBufferAttribute(colors, 3)
         );
+        geometry.attributes.color.needsUpdate = true;
+        console.log('✅ Colors applied to geometry');
       }
     }
-  }, [allStars]);
+  }, [allStars, maxVisibleStars]);
   
   // Initial setup - hide all stars
   useEffect(() => {
