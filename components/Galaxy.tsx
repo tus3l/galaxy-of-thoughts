@@ -6,12 +6,66 @@ import * as THREE from 'three';
 import { GalaxyProps, StarData } from '@/types';
 import { generateStarData } from '@/lib/utils';
 
-export default function Galaxy({ starCount = 2000, starData: providedData, onStarClick, onStarHover }: GalaxyProps) {
+export default function Galaxy({ starCount = 2000, starData: providedData, onStarClick, onStarHover, newStarPosition }: GalaxyProps & { newStarPosition?: [number, number, number] }) {
   const meshRef = useRef<THREE.InstancedMesh>(null);
   const [hovered, setHovered] = useState<number | null>(null);
   const originalScalesRef = useRef<Float32Array>();
   const visibleStarsRef = useRef<number[]>([]);
   const { camera } = useThree();
+  
+  // Move camera to new star when created
+  useEffect(() => {
+    if (newStarPosition) {
+      const [x, y, z] = newStarPosition;
+      // Animate camera to new star position (with offset)
+      const targetPos = new THREE.Vector3(x + 30, y + 30, z + 50);
+      const startPos = camera.position.clone();
+      const duration = 2000; // 2 seconds
+      const startTime = Date.now();
+      
+      const animate = () => {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const easeProgress = 1 - Math.pow(1 - progress, 3); // ease out cubic
+        
+        camera.position.lerpVectors(startPos, targetPos, easeProgress);
+        camera.lookAt(x, y, z);
+        
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        }
+      };
+      
+      animate();
+    }
+  }, [newStarPosition, camera]);
+  
+  // Move camera to new star when created
+  useEffect(() => {
+    if (newStarPosition) {
+      const [x, y, z] = newStarPosition;
+      // Animate camera to new star position (with offset)
+      const targetPos = new THREE.Vector3(x + 30, y + 30, z + 50);
+      const startPos = camera.position.clone();
+      const duration = 2000; // 2 seconds
+      const startTime = Date.now();
+      
+      const animate = () => {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const easeProgress = 1 - Math.pow(1 - progress, 3); // ease out cubic
+        
+        camera.position.lerpVectors(startPos, targetPos, easeProgress);
+        camera.lookAt(x, y, z);
+        
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        }
+      };
+      
+      animate();
+    }
+  }, [newStarPosition, camera]);
   
   // Generate large pool of stars for infinite world
   const allStars = useMemo(() => 

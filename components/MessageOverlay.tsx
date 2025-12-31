@@ -48,6 +48,22 @@ export default function MessageOverlay({ star, isVisible, onClose }: MessageOver
 
           {/* Star Icon */}
           <div className="flex items-center justify-center mb-6">
+            <div className="text-6xl animate-pulse">
+              {star.color === 'yellow' && '🌟'}
+              {star.color === 'blue' && '🔵'}
+              {star.color === 'purple' && '🟪'}
+              {star.color === 'pink' && '🌸'}
+              {star.color === 'orange' && '🔶'}
+              {!['yellow', 'blue', 'purple', 'pink', 'orange'].includes(star.color) && '⭐'}
+            </div>
+          </div>
+
+          {/* Star Coordinates */}
+          <div className="mb-4 p-3 bg-black/20 rounded-lg border border-white/10">
+            <p className="text-xs text-gray-400 text-center font-mono">
+              Coordinates: ({star.position[0].toFixed(1)}, {star.position[1].toFixed(1)}, {star.position[2].toFixed(1)})
+            </p>
+          </div>
             <div 
               className="w-16 h-16 rounded-full flex items-center justify-center"
               style={{ 

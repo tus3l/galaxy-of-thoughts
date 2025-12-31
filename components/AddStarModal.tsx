@@ -6,7 +6,7 @@ import { getUserFingerprint } from '@/lib/fingerprint';
 interface AddStarModalProps {
   isVisible: boolean;
   onClose: () => void;
-  onSuccess?: () => void;
+  onSuccess?: (star?: any) => void;
 }
 
 export default function AddStarModal({ isVisible, onClose, onSuccess }: AddStarModalProps) {
@@ -65,7 +65,10 @@ export default function AddStarModal({ isVisible, onClose, onSuccess }: AddStarM
 
       setSuccess(true);
       setTimeout(() => {
-        onSuccess?.();
+        // Pass the new star data to parent
+        if (onSuccess && data.star) {
+          onSuccess(data.star);
+        }
         onClose();
         setMessage('');
         setSuccess(false);
