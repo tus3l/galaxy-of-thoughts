@@ -5,41 +5,74 @@ import { generateRandomPosition } from '@/lib/utils';
 // Content moderation function using OpenAI
 async function moderateContent(text: string): Promise<{ allowed: boolean; reason?: string }> {
   try {
-    // 1. Use OpenAI Moderation API first for profanity/inappropriate content
-    if (process.env.OPENAI_API_KEY) {
-      const response = await fetch('https://api.openai.com/v1/moderations', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-        },
-        body: JSON.stringify({ input: text }),
-      });
+    console.log('🔍 Moderating content:', text.substring(0, 50));
+    
+    // FIRST: Basic profanity filter (backup if OpenAI fails)
+    const profanityPatterns = [
+      /fuck/gi, /shit/gi, /bitch/gi, /ass(?!istant|ume)/gi, /damn/gi,
+      /crap/gi, /hell/gi, /bastard/gi, /dick/gi, /pussy/gi,
+      /whore/gi, /slut/gi, /cock/gi, /piss/gi, /cunt/gi,
+      // With common substitutions
+      /f+u+c+k+/gi, /s+h+i+t+/gi, /b+i+t+c+h+/gi,
+      /f[\*@u]ck/gi, /sh[\*!1i]t/gi, /b[\*!1i]tch/gi,
+      // Arabic profanity
+      /كس/g, /زب/g, /عرص/g, /خرا/g, /شرموط/g,
+    ];
 
-      if (!response.ok) {
-        console.error('OpenAI Moderation API error:', response.status);
-        // Continue without OpenAI if API fails
-        return { allowed: true };
-      }
-
-      const data = await response.json();
-      const result = data.results[0];
-
-      if (result.flagged) {
-        const flaggedCategories = Object.entries(result.categories)
-          .filter(([_, flagged]) => flagged)
-          .map(([category]) => category);
-        
+    for (const pattern of profanityPatterns) {
+      if (pattern.test(text)) {
+        console.log('❌ Profanity detected by pattern:', pattern);
         return {
           allowed: false,
-          reason: `Your message contains inappropriate content detected by AI: ${flaggedCategories.join(', ')}`
+          reason: 'Your message contains inappropriate or offensive language'
         };
       }
+    }
+    
+    // SECOND: Try OpenAI Moderation API
+    if (process.env.OPENAI_API_KEY) {
+      console.log('🤖 Checking with OpenAI...');
+      try {
+        const response = await fetch('https://api.openai.com/v1/moderations', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+          },
+          body: JSON.stringify({ input: text }),
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('❌ OpenAI API error:', response.status, errorText);
+          // Continue with other checks
+        } else {
+          const data = await response.json();
+          const result = data.results[0];
+          console.log('OpenAI result:', result);
+
+          if (result.flagged) {
+            const flaggedCategories = Object.entries(result.categories)
+              .filter(([_, flagged]) => flagged)
+              .map(([category]) => category);
+            
+            console.log('❌ OpenAI flagged:', flaggedCategories);
+            return {
+              allowed: false,
+              reason: `Your message contains inappropriate content: ${flaggedCategories.join(', ')}`
+            };
+          }
+          console.log('✅ OpenAI passed');
+        }
+      } catch (openaiError) {
+        console.error('❌ OpenAI fetch error:', openaiError);
+        // Continue with other checks
+      }
     } else {
-      console.warn('OpenAI API key not configured - AI moderation disabled');
+      console.warn('⚠️ OpenAI API key not configured');
     }
 
-    // 2. Detect encoding/obfuscation attempts
+    // THIRD: Detect encoding/obfuscation attempts
     const suspiciousPatterns = [
       /[a-z0-9]{25,}/gi, // Long strings without spaces (possible encoding)
       /[\u200B-\u200D\uFEFF]/g, // Zero-width characters
@@ -50,6 +83,7 @@ async function moderateContent(text: string): Promise<{ allowed: boolean; reason
 
     for (const pattern of suspiciousPatterns) {
       if (pattern.test(text)) {
+        console.log('❌ Suspicious pattern detected');
         return {
           allowed: false,
           reason: 'Messages cannot contain encoded text, excessive symbols, or obfuscated content'
@@ -57,7 +91,7 @@ async function moderateContent(text: string): Promise<{ allowed: boolean; reason
       }
     }
 
-    // 3. Check for social media patterns (emails, phone numbers, social handles)
+    // FOURTH: Check for social media patterns (emails, phone numbers, social handles)
     const socialMediaPatterns = [
       /\b[\w\.-]+@[\w\.-]+\.\w+\b/gi, // Email
       /\b[\w\.-]+\s*@\s*[\w\.-]+\s*\.\s*\w+\b/gi, // Email with spaces
@@ -73,6 +107,7 @@ async function moderateContent(text: string): Promise<{ allowed: boolean; reason
 
     for (const pattern of socialMediaPatterns) {
       if (pattern.test(text)) {
+        console.log('❌ Social media pattern detected');
         return {
           allowed: false,
           reason: 'Messages cannot contain contact information, social media handles, usernames, or URLs'
@@ -80,11 +115,15 @@ async function moderateContent(text: string): Promise<{ allowed: boolean; reason
       }
     }
 
+    console.log('✅ All moderation checks passed');
     return { allowed: true };
   } catch (error) {
-    console.error('Content moderation error:', error);
-    // Allow message if moderation fails
-    return { allowed: true };
+    console.error('❌ Content moderation error:', error);
+    // IMPORTANT: Reject on error to be safe
+    return { 
+      allowed: false,
+      reason: 'Unable to verify content safety. Please try again.'
+    };
   }
 }
 
