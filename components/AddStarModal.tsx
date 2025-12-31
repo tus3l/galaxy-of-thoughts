@@ -60,7 +60,7 @@ export default function AddStarModal({ isVisible, onClose, onSuccess }: AddStarM
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'فشل في إضافة النجمة');
+        throw new Error(data.error || 'Failed to add star');
       }
 
       setSuccess(true);
@@ -102,12 +102,14 @@ export default function AddStarModal({ isVisible, onClose, onSuccess }: AddStarM
   if (!isVisible) return null;
 
   const formatRemainingTime = (minutes: number) => {
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    if (hours > 0) {
-      return `${hours} ساعة و ${mins} دقيقة`;
+    // Since we're using 1-minute cooldown, convert to seconds
+    const seconds = Math.ceil(minutes * 60);
+    if (seconds < 60) {
+      return `${seconds} second${seconds !== 1 ? 's' : ''}`;
     }
-    return `${mins} دقيقة`;
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins} minute${mins !== 1 ? 's' : ''} and ${secs} second${secs !== 1 ? 's' : ''}`;
   };
 
   return (
@@ -138,10 +140,10 @@ export default function AddStarModal({ isVisible, onClose, onSuccess }: AddStarM
               <span className="text-4xl">✨</span>
             </div>
             <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">
-              أضف نجمتك إلى المجرة
+              Add Your Star to the Galaxy
             </h2>
             <p className="text-gray-400 text-sm">
-              شارك رسالتك مع العالم • نجمة واحدة كل 24 ساعة
+              Share your message with the world • One star every minute
             </p>
           </div>
 
@@ -149,8 +151,8 @@ export default function AddStarModal({ isVisible, onClose, onSuccess }: AddStarM
           {!canSubmit && (
             <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 mb-6">
               <p className="text-yellow-300 text-center">
-                ⏰ لقد أضفت نجمتك اليوم!<br />
-                يمكنك إضافة نجمة جديدة بعد {formatRemainingTime(remainingTime)}
+                ⏰ You've already added your star!<br />
+                You can add a new star in {formatRemainingTime(remainingTime)}
               </p>
             </div>
           )}
@@ -159,7 +161,7 @@ export default function AddStarModal({ isVisible, onClose, onSuccess }: AddStarM
           {success && (
             <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4 mb-6">
               <p className="text-green-300 text-center">
-                ✨ تم إضافة نجمتك بنجاح! جاري تحديث المجرة...
+                ✨ Your star has been added successfully! Updating the galaxy...
               </p>
             </div>
           )}
@@ -177,7 +179,7 @@ export default function AddStarModal({ isVisible, onClose, onSuccess }: AddStarM
               <textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder="اكتب رسالتك هنا... (10-280 حرف)"
+                placeholder="Write your message here... (10-280 characters)"
                 className="w-full h-32 bg-white/5 border border-white/10 rounded-lg p-4 text-white placeholder-gray-500 focus:outline-none focus:border-blue-400/50 transition-colors resize-none"
                 maxLength={280}
                 minLength={10}
@@ -190,7 +192,7 @@ export default function AddStarModal({ isVisible, onClose, onSuccess }: AddStarM
                   {message.length}/280
                 </span>
                 <span className="text-xs text-gray-500">
-                  {message.length >= 10 ? '✓' : ''} الحد الأدنى: 10 أحرف
+                  {message.length >= 10 ? '✓' : ''} Minimum: 10 characters
                 </span>
               </div>
 
@@ -201,14 +203,14 @@ export default function AddStarModal({ isVisible, onClose, onSuccess }: AddStarM
                   className="flex-1 px-6 py-3 bg-white/5 hover:bg-white/10 text-white rounded-lg transition-all duration-300"
                   disabled={isSubmitting}
                 >
-                  إلغاء
+                  Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting || message.length < 10}
                   className="flex-1 px-6 py-3 bg-gradient-to-r from-yellow-400 to-orange-400 hover:from-yellow-500 hover:to-orange-500 text-black font-semibold rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isSubmitting ? 'جاري الإضافة...' : '✨ إطلاق النجمة'}
+                  {isSubmitting ? 'Adding...' : '✨ Launch Star'}
                 </button>
               </div>
             </form>
@@ -220,7 +222,7 @@ export default function AddStarModal({ isVisible, onClose, onSuccess }: AddStarM
               onClick={handleClose}
               className="w-full px-6 py-3 bg-white/5 hover:bg-white/10 text-white rounded-lg transition-all duration-300"
             >
-              إغلاق
+              Close
             </button>
           )}
         </div>

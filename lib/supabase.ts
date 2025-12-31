@@ -6,7 +6,7 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 /**
- * Check if user can submit a new star (24 hour cooldown)
+ * Check if user can submit a new star (1 minute cooldown for testing)
  */
 export async function canUserSubmit(fingerprintId: string): Promise<{ canSubmit: boolean; remainingTime?: number }> {
   const { data, error } = await supabase
@@ -24,13 +24,13 @@ export async function canUserSubmit(fingerprintId: string): Promise<{ canSubmit:
 
   const lastSubmission = new Date(data.created_at);
   const now = new Date();
-  const hoursSinceLastSubmission = (now.getTime() - lastSubmission.getTime()) / (1000 * 60 * 60);
+  const minutesSinceLastSubmission = (now.getTime() - lastSubmission.getTime()) / (1000 * 60);
 
-  if (hoursSinceLastSubmission >= 24) {
+  if (minutesSinceLastSubmission >= 1) {
     return { canSubmit: true };
   }
 
-  const remainingTime = Math.ceil((24 - hoursSinceLastSubmission) * 60); // في دقائق
+  const remainingTime = Math.ceil(1 - minutesSinceLastSubmission); // in minutes
   return { canSubmit: false, remainingTime };
 }
 

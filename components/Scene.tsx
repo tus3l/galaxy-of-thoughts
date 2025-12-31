@@ -51,7 +51,7 @@ interface SceneProps {
 }
 
 export default function Scene({ onStarClick, newStarPosition }: SceneProps) {
-  // موقع عشوائي للكاميرا عند البداية
+  // Random camera position at start
   const randomX = (Math.random() - 0.5) * 400;
   const randomY = (Math.random() - 0.5) * 400;
   const randomZ = 50 + Math.random() * 150;

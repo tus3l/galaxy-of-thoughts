@@ -87,7 +87,10 @@ export async function POST(request: NextRequest) {
     const moderation = await moderateContent(message);
     if (!moderation.allowed) {
       return NextResponse.json(
-        { error: moderation.reason || 'Your message contains inappropriate content' },
+        { 
+          error: `Your star was not published due to: ${moderation.reason}`,
+          category: 'content_violation'
+        },
         { status: 400 }
       );
     }
@@ -98,7 +101,7 @@ export async function POST(request: NextRequest) {
     if (!eligibility.canSubmit) {
       return NextResponse.json(
         {
-          error: 'You can only add one star every 24 hours ✨',
+          error: `You can only add one star every minute. Please wait ${eligibility.remainingTime} second(s) ✨`,
           remainingTime: eligibility.remainingTime,
         },
         { status: 429 }
