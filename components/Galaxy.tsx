@@ -24,21 +24,14 @@ export default function Galaxy({ onStarClick, onStarHover, newStarPosition }: Om
       
       if (data && !error) {
         const formattedStars: StarData[] = data
-          .filter(star => star.position) // Filter out stars without position
-          .map((star, index) => {
-            // Parse position if it's a string
-            let position: [number, number, number];
-            if (typeof star.position === 'string') {
-              try {
-                position = JSON.parse(star.position);
-              } catch {
-                position = [0, 0, 0];
-              }
-            } else if (Array.isArray(star.position)) {
-              position = star.position as [number, number, number];
-            } else {
-              position = [0, 0, 0];
-            }
+          .filter(star => star.position_x !== null && star.position_y !== null && star.position_z !== null)
+          .map((star) => {
+            // Build position from separate x, y, z fields
+            const position: [number, number, number] = [
+              star.position_x,
+              star.position_y,
+              star.position_z
+            ];
             
             return {
               id: star.id,
@@ -52,6 +45,9 @@ export default function Galaxy({ onStarClick, onStarHover, newStarPosition }: Om
             };
           });
         setRealStars(formattedStars);
+        console.log('✨ Loaded stars:', formattedStars.length);
+      } else if (error) {
+        console.error('Error fetching stars:', error);
       }
     };
     
@@ -88,12 +84,14 @@ export default function Galaxy({ onStarClick, onStarHover, newStarPosition }: Om
   // Use real stars only
   const allStars = realStars;
   
-  // Show closest 100 stars (increased for better experience)
-  const maxVisibleStars = 100;
+  // Show all stars (no limit for now since we only show real ones)
+  const maxVisibleStars = Math.max(allStars.length, 10); // At least 10 instances
   
   // Store original scales
   useEffect(() => {
-    originalScalesRef.current = new Float32Array(allStars.map(s => s.scale));
+    if (allStars.length > 0) {
+      originalScalesRef.current = new Float32Array(allStars.map(s => s.scale));
+    }
   }, [allStars]);
   
   // Initial setup - hide all stars
@@ -106,7 +104,7 @@ export default function Galaxy({ onStarClick, onStarHover, newStarPosition }: Om
       meshRef.current.setMatrixAt(i, dummy.matrix);
     }
     meshRef.current.instanceMatrix.needsUpdate = true;
-  }, []);
+  }, [maxVisibleStars]);
 
   // Dynamic culling - show 100 stars in camera view
   useFrame((state) => {
@@ -144,18 +142,14 @@ export default function Galaxy({ onStarClick, onStarHover, newStarPosition }: Om
     // Sort by priority (distance for stars in view, far away for stars behind)
     starsWithDistance.sort((a, b) => a.priority - b.priority);
     const closestStars = starsWithDistance.slice(0, maxVisibleStars);
-    visibleStarsRef.current = closestStars.map(s => s.index);
-
-    // Render only visible stars
-    closestStars.forEach((item, i) => {
-      const star = item.star;
-      
+    // Render all real stars directly
+    allStars.forEach((star, i) => {
       // Pulsation effect
-      const pulsate = 1 + Math.sin(time * star.speed + item.index * 0.1) * 0.15;
+      const pulsate = 1 + Math.sin(time * star.speed + i * 0.1) * 0.15;
       
       // Hover effect
-      const hoverScale = item.index === hovered ? 2.0 : 1;
-      const finalScale = originalScalesRef.current![item.index] * pulsate * hoverScale;
+      const hoverScale = i === hovered ? 2.0 : 1;
+      const finalScale = (originalScalesRef.current?.[i] || 1.5) * pulsate * hoverScale;
       
       dummy.position.set(...star.position);
       dummy.scale.setScalar(finalScale);
@@ -163,9 +157,12 @@ export default function Galaxy({ onStarClick, onStarHover, newStarPosition }: Om
       meshRef.current!.setMatrixAt(i, dummy.matrix);
     });
     
+    // Update visible stars ref (all stars are visible)
+    visibleStarsRef.current = allStars.map((_, i) => i);
+    
     // Hide remaining slots
     dummy.scale.setScalar(0);
-    for (let i = closestStars.length; i < maxVisibleStars; i++) {
+    for (let i = allStars.length; i < maxVisibleStars; i++) {
       meshRef.current!.setMatrixAt(i, dummy.matrix);
     }
 

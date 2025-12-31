@@ -47,15 +47,25 @@ export default function Home() {
   };
 
   const handleAddStarSuccess = (star?: any) => {
+    console.log('🌟 New star data:', star);
+    
     // Set new star position to animate camera
     if (star && star.position) {
+      console.log('📍 Moving camera to:', star.position);
       setNewStarPosition(star.position);
-    }
-    // Refresh to show the new star
-    fetchStarsCount();
-    setTimeout(() => {
+      
+      // Refresh stars count
+      fetchStarsCount();
+      
+      // Reload after camera animation completes (3 seconds)
+      setTimeout(() => {
+        window.location.reload();
+      }, 3000);
+    } else {
+      console.error('❌ No position in star data:', star);
+      // Fallback: just reload
       window.location.reload();
-    }, 2500);
+    }
   };
 
   return (
