@@ -173,9 +173,10 @@ export default function Galaxy({ onStarClick, onStarHover, newStarPosition }: Om
   const handleClick = (event: any) => {
     event.stopPropagation();
     const instanceId = event.instanceId;
-    if (instanceId !== undefined && instanceId < visibleStarsRef.current.length) {
-      const actualStarIndex = visibleStarsRef.current[instanceId];
-      const star = allStars[actualStarIndex];
+    console.log('🖱️ Clicked instance:', instanceId, 'Total stars:', allStars.length);
+    
+    if (instanceId !== undefined && instanceId < allStars.length) {
+      const star = allStars[instanceId];
       console.log('✨ Clicked star:', star);
       onStarClick?.(star);
     }
@@ -185,10 +186,9 @@ export default function Galaxy({ onStarClick, onStarHover, newStarPosition }: Om
     event.stopPropagation();
     const instanceId = event.instanceId;
     
-    if (instanceId !== undefined && instanceId < visibleStarsRef.current.length) {
-      const actualStarIndex = visibleStarsRef.current[instanceId];
-      setHovered(actualStarIndex);
-      onStarHover?.(allStars[actualStarIndex]);
+    if (instanceId !== undefined && instanceId < allStars.length) {
+      setHovered(instanceId);
+      onStarHover?.(allStars[instanceId]);
       document.body.style.cursor = 'pointer';
     } else {
       setHovered(null);
