@@ -54,18 +54,19 @@ export default function Home() {
     // Update counter immediately
     setTotalStars(prev => prev + 1);
     
-    // Set new star position to animate camera
+    // Set new star position to animate camera AND refresh stars immediately
     if (star && star.position) {
       console.log('📍 Moving camera to:', star.position);
       setNewStarPosition(star.position);
       
-      // Trigger Galaxy to reload stars after animation completes
+      // Refresh stars IMMEDIATELY to trigger explosion animation
+      console.log('✨ Refreshing stars list for explosion...');
+      setRefreshTrigger(prev => prev + 1);
+      
+      // Fetch actual count after a short delay to ensure sync
       setTimeout(() => {
-        console.log('✨ Refreshing stars list...');
-        setRefreshTrigger(prev => prev + 1);
-        // Fetch actual count to ensure sync
         fetchStarsCount();
-      }, 3500);
+      }, 1000);
     } else {
       console.error('❌ No position in star data:', star);
       // Refresh manually if no position

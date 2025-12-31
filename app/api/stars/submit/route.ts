@@ -308,7 +308,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const color = '#ffffff'; // All stars are white
+    const color = '#8C1FA6'; // Purple color for all stars
 
     // Submit to database with sanitized message
     const star = await submitStar(fingerprintId, sanitizedMessage, position, color);

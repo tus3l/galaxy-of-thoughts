@@ -68,7 +68,7 @@ export default function MessageOverlay({ star, isVisible, onClose }: MessageOver
             
             {/* Metadata */}
             <div className="flex items-center justify-center gap-4 text-sm text-gray-400">
-              <span>Star #{star.id}</span>
+              <span className="font-mono text-purple-400">Star #{star.id}</span>
               <span>•</span>
               <span>{star.createdAt ? new Date(star.createdAt).toLocaleDateString('en-US') : 'Unknown'}</span>
             </div>
