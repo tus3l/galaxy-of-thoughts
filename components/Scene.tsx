@@ -71,19 +71,6 @@ export default function Scene({ onStarClick, newStarPosition, refreshTrigger }: 
         toneMappingExposure: 1.2,
       }}
       style={{ touchAction: 'none' }}
-      events={(store) => ({
-        ...store.events,
-        priority: 1,
-        enabled: true,
-        compute: (event, state) => {
-          console.log('👆 Canvas event:', event.type);
-          state.pointer.set(
-            (event.clientX / state.size.width) * 2 - 1,
-            -(event.clientY / state.size.height) * 2 + 1
-          );
-          state.raycaster.setFromCamera(state.pointer, state.camera);
-        }
-      })}
     >
       <Suspense fallback={null}>
         <CrosshairRemover />

@@ -54,6 +54,9 @@ export default function Galaxy({ onStarClick, onStarHover, newStarPosition, refr
     fetchStars();
   }, [refreshTrigger]); // Re-fetch when refreshTrigger changes
   
+  // Use real stars only
+  const allStars = realStars;
+  
   // Manual click detection with DOM events
   useEffect(() => {
     const canvas = gl.domElement;
@@ -142,9 +145,6 @@ export default function Galaxy({ onStarClick, onStarHover, newStarPosition, refr
       animate();
     }
   }, [newStarPosition, camera]);
-  
-  // Use real stars only
-  const allStars = realStars;
   
   // Show all stars (no limit for now since we only show real ones)
   const maxVisibleStars = Math.max(allStars.length, 10); // At least 10 instances
