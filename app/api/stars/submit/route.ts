@@ -53,7 +53,71 @@ async function moderateContent(text: string): Promise<{ allowed: boolean; reason
       }
     }
     
-    // SECOND: Try OpenAI Moderation API
+    // SECOND: Try Perspective API (Google's toxicity detection)
+    if (process.env.PERSPECTIVE_API_KEY) {
+      console.log('🔍 Checking with Perspective API...');
+      try {
+        const response = await fetch(
+          `https://commentanalyzer.googleapis.com/v1alpha1/comments:analyze?key=${process.env.PERSPECTIVE_API_KEY}`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              comment: { text },
+              languages: ['en', 'ar'],
+              requestedAttributes: {
+                TOXICITY: {},
+                SEVERE_TOXICITY: {},
+                IDENTITY_ATTACK: {},
+                INSULT: {},
+                PROFANITY: {},
+                THREAT: {},
+              },
+            }),
+          }
+        );
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('❌ Perspective API error:', response.status, errorText);
+          // Continue with other checks
+        } else {
+          const data = await response.json();
+          console.log('Perspective API result:', data);
+
+          // Check toxicity scores (threshold: 0.7 = 70% toxic)
+          const toxicityScore = data.attributeScores?.TOXICITY?.summaryScore?.value || 0;
+          const severeToxicityScore = data.attributeScores?.SEVERE_TOXICITY?.summaryScore?.value || 0;
+          const profanityScore = data.attributeScores?.PROFANITY?.summaryScore?.value || 0;
+          const insultScore = data.attributeScores?.INSULT?.summaryScore?.value || 0;
+
+          console.log('Toxicity scores:', {
+            toxicity: toxicityScore,
+            severeToxicity: severeToxicityScore,
+            profanity: profanityScore,
+            insult: insultScore,
+          });
+
+          if (toxicityScore > 0.7 || severeToxicityScore > 0.5 || profanityScore > 0.7 || insultScore > 0.7) {
+            console.log('❌ Perspective API flagged content');
+            return {
+              allowed: false,
+              reason: 'Your message contains toxic or offensive content detected by AI'
+            };
+          }
+          console.log('✅ Perspective API passed');
+        }
+      } catch (perspectiveError) {
+        console.error('❌ Perspective API fetch error:', perspectiveError);
+        // Continue with other checks
+      }
+    } else {
+      console.warn('⚠️ Perspective API key not configured');
+    }
+    
+    // THIRD: Try OpenAI Moderation API
     if (process.env.OPENAI_API_KEY) {
       console.log('🤖 Checking with OpenAI...');
       try {
