@@ -52,7 +52,7 @@ export default function Home() {
     console.log('🌟 New star data:', star);
     
     // Update counter immediately
-    setStarsCount(prev => prev + 1);
+    setTotalStars(prev => prev + 1);
     
     // Set new star position to animate camera
     if (star && star.position) {
