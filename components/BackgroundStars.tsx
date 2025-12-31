@@ -11,10 +11,10 @@ export default function BackgroundStars() {
     for (let i = 0; i < 2000; i++) {
       const i3 = i * 3;
       
-      // Distribute in a large sphere
+      // Distribute uniformly in all space
       const theta = Math.random() * Math.PI * 2;
       const phi = Math.acos((Math.random() * 2) - 1);
-      const radius = 800 + Math.random() * 500;
+      const radius = 50 + Math.random() * 1200;
       
       positions[i3] = radius * Math.sin(phi) * Math.cos(theta);
       positions[i3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
