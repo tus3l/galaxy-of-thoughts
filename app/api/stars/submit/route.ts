@@ -217,17 +217,28 @@ async function moderateContent(text: string): Promise<{ allowed: boolean; reason
 
 export async function POST(request: NextRequest) {
   try {
-    const { fingerprintId, message } = await request.json();
+    const body = await request.json();
+    const { fingerprintId, message } = body;
 
-    // Validation
-    if (!fingerprintId || !message) {
+    // Strict validation
+    if (!fingerprintId || typeof fingerprintId !== 'string' || fingerprintId.length > 200) {
       return NextResponse.json(
-        { error: 'Fingerprint ID and message are required' },
+        { error: 'Invalid fingerprint ID' },
         { status: 400 }
       );
     }
 
-    if (message.length < 10 || message.length > 280) {
+    if (!message || typeof message !== 'string') {
+      return NextResponse.json(
+        { error: 'Message is required and must be a string' },
+        { status: 400 }
+      );
+    }
+
+    // Sanitize message (remove null bytes and control characters)
+    const sanitizedMessage = message.replace(/[\x00-\x1F\x7F]/g, '').trim();
+
+    if (sanitizedMessage.length < 10 || sanitizedMessage.length > 280) {
       return NextResponse.json(
         { error: 'Message must be between 10 and 280 characters' },
         { status: 400 }
@@ -235,7 +246,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Content moderation check
-    const moderation = await moderateContent(message);
+    const moderation = await moderateContent(sanitizedMessage);
     if (!moderation.allowed) {
       return NextResponse.json(
         { 
@@ -262,7 +273,7 @@ export async function POST(request: NextRequest) {
     // Generate random position with collision detection
     let position: [number, number, number];
     let attempts = 0;
-    const maxAttempts = 10;
+    const maxAttempts = 20; // Increased for safety
     const minDistance = 15; // Minimum distance between stars
 
     // Get all existing star positions
@@ -289,24 +300,41 @@ export async function POST(request: NextRequest) {
       if (!isTooClose) break;
     } while (attempts < maxAttempts);
 
+    // Validate position values
+    if (!position || position.some(v => !isFinite(v) || Math.abs(v) > 500)) {
+      return NextResponse.json(
+        { error: 'Invalid star position generated' },
+        { status: 500 }
+      );
+    }
+
     const color = '#ffffff'; // All stars are white
 
-    // Submit to database
-    const star = await submitStar(fingerprintId, message, position, color);
+    // Submit to database with sanitized message
+    const star = await submitStar(fingerprintId, sanitizedMessage, position, color);
 
     return NextResponse.json({
       success: true,
       star: {
-        ...star,
-        position, // Include position for camera animation
+        id: star.id,
+        message: star.message,
+        created_at: star.created_at,
+        position: position, // Include position for camera animation
       },
       message: 'Your star has been added to the galaxy! ✨',
     });
   } catch (error: any) {
     console.error('Error submitting star:', error);
+    
+    // Don't expose internal error details
+    const safeErrorMessage = 
+      error.message?.includes('fingerprint') ? 'Invalid request' :
+      error.message?.includes('rate') ? 'Too many requests' :
+      'An error occurred while adding your star. Please try again.';
+    
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
-      { status: 500 }
+      { error: safeErrorMessage },
+      { status: error.status || 500 }
     );
   }
 }

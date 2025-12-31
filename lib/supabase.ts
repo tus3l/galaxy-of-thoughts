@@ -7,8 +7,38 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 /**
  * Check if user can submit a new star (1 minute cooldown for testing)
+ * Also checks for suspicious activity (too many attempts)
  */
 export async function canUserSubmit(fingerprintId: string): Promise<{ canSubmit: boolean; remainingTime?: number }> {
+  // Validate fingerprint format
+  if (!fingerprintId || typeof fingerprintId !== 'string' || fingerprintId.length > 200) {
+    throw new Error('Invalid fingerprint ID');
+  }
+
+  // Check last 10 submissions to detect abuse
+  const { data: recentSubmissions, error: countError } = await supabase
+    .from('stars')
+    .select('created_at')
+    .eq('fingerprint_id', fingerprintId)
+    .order('created_at', { ascending: false })
+    .limit(10);
+
+  if (countError) {
+    console.error('Error checking submission history:', countError);
+  }
+
+  // If user has 10+ stars, they're potentially abusing the system
+  if (recentSubmissions && recentSubmissions.length >= 10) {
+    const oldestOfTen = new Date(recentSubmissions[9].created_at);
+    const now = new Date();
+    const hoursSinceOldest = (now.getTime() - oldestOfTen.getTime()) / (1000 * 60 * 60);
+    
+    // If 10 submissions in less than 1 hour, block
+    if (hoursSinceOldest < 1) {
+      return { canSubmit: false, remainingTime: 60 };
+    }
+  }
+
   const { data, error } = await supabase
     .from('stars')
     .select('created_at')
