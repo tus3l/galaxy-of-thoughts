@@ -64,16 +64,6 @@ export default function MessageOverlay({ star, isVisible, onClose }: MessageOver
               Coordinates: ({star.position[0].toFixed(1)}, {star.position[1].toFixed(1)}, {star.position[2].toFixed(1)})
             </p>
           </div>
-            <div 
-              className="w-16 h-16 rounded-full flex items-center justify-center"
-              style={{ 
-                backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                boxShadow: '0 0 30px rgba(255, 255, 255, 0.3)'
-              }}
-            >
-              <span className="text-4xl">✨</span>
-            </div>
-          </div>
 
           {/* Message */}
           <div className="text-center">
@@ -85,13 +75,13 @@ export default function MessageOverlay({ star, isVisible, onClose }: MessageOver
             <div className="flex items-center justify-center gap-4 text-sm text-gray-400">
               <span>Star #{star.id}</span>
               <span>•</span>
-              <span>{star.createdAt ? new Date(star.createdAt).toLocaleDateString('ar-SA') : 'Unknown'}</span>
+              <span>{star.createdAt ? new Date(star.createdAt).toLocaleDateString('en-US') : 'Unknown'}</span>
             </div>
           </div>
 
           {/* Close hint */}
           <div className="mt-6 text-center text-sm text-gray-500">
-            اضغط ESC أو انقر خارج المربع للإغلاق
+            Press ESC or click outside to close
           </div>
         </div>
       </div>
