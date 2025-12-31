@@ -75,7 +75,7 @@ export default function Home() {
   };
 
   return (
-    <main className="w-screen h-screen relative">
+    <main className="w-screen h-screen relative" style={{ height: '100dvh', width: '100dvw' }}>
       <Suspense fallback={<LoadingScreen />}>
         <Scene 
           onStarClick={handleStarClick}

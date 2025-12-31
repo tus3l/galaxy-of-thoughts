@@ -7,6 +7,12 @@
   --foreground: #ffffff;
 }
 
+html {
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+}
+
 body {
   color: var(--foreground);
   background: var(--background);
@@ -18,6 +24,13 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  height: 100vh;
+  height: 100dvh; /* Dynamic viewport height for mobile */
+  width: 100vw;
+  width: 100dvw; /* Dynamic viewport width for mobile */
+  position: fixed;
+  top: 0;
+  left: 0;
 }
 
 * {
