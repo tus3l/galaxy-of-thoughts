@@ -171,13 +171,26 @@ export default function Galaxy({ onStarClick, onStarHover, newStarPosition, refr
   
   // Move camera to new star when created
   useEffect(() => {
-    if (newStarPosition && allStars.length > 0) {
-      // Find the newly created star (last one in the array)
-      const newStarIndex = allStars.length - 1;
+    if (newStarPosition) {
+      console.log('🎆 New star created at:', newStarPosition);
+      console.log('📊 Current stars count:', allStars.length);
+      
+      // Start animation immediately when position is set
       newStarAnimationRef.current = {
-        index: newStarIndex,
+        index: -1, // Will be updated when star is loaded
         startTime: Date.now()
       };
+      
+      // After a short delay, find the actual star index
+      setTimeout(() => {
+        if (allStars.length > 0) {
+          const newStarIndex = allStars.length - 1;
+          console.log('🌟 Setting animation for star index:', newStarIndex);
+          if (newStarAnimationRef.current) {
+            newStarAnimationRef.current.index = newStarIndex;
+          }
+        }
+      }, 100);
       
       const [x, y, z] = newStarPosition;
       // Animate camera to new star position (with offset)
@@ -201,7 +214,7 @@ export default function Galaxy({ onStarClick, onStarHover, newStarPosition, refr
       
       animate();
     }
-  }, [newStarPosition, camera, allStars]);
+  }, [newStarPosition, camera]);
   
   // Show all stars (no limit for now since we only show real ones)
   const maxVisibleStars = Math.max(allStars.length, 10); // At least 10 instances
@@ -269,32 +282,34 @@ export default function Galaxy({ onStarClick, onStarHover, newStarPosition, refr
       
       if (newStarAnimationRef.current && newStarAnimationRef.current.index === i) {
         const elapsed = Date.now() - newStarAnimationRef.current.startTime;
-        const animDuration = 1500; // 1.5 seconds explosion animation
+        const animDuration = 2000; // 2 seconds explosion animation
         
         if (elapsed < animDuration) {
           const progress = elapsed / animDuration;
+          console.log(`💥 Star ${i} explosion progress:`, progress.toFixed(2));
           
-          // Phase 1: Explosion (0 - 0.3) - rapid expansion with bright flash
-          if (progress < 0.3) {
-            const phase1 = progress / 0.3;
-            explosionScale = 0.1 + (phase1 * 8); // Scale from 0.1 to 8
-            glowIntensity = 10 - (phase1 * 7); // Intense glow 10 -> 3
+          // Phase 1: Explosion (0 - 0.25) - rapid expansion with bright flash
+          if (progress < 0.25) {
+            const phase1 = progress / 0.25;
+            explosionScale = 0.1 + (phase1 * 12); // Scale from 0.1 to 12
+            glowIntensity = 15 - (phase1 * 10); // Intense glow 15 -> 5
           }
-          // Phase 2: Contraction (0.3 - 0.6) - pull back
-          else if (progress < 0.6) {
-            const phase2 = (progress - 0.3) / 0.3;
-            explosionScale = 8 - (phase2 * 6.5); // Scale from 8 to 1.5
-            glowIntensity = 3 - (phase2 * 1); // Glow 3 -> 2
+          // Phase 2: Contraction (0.25 - 0.5) - pull back
+          else if (progress < 0.5) {
+            const phase2 = (progress - 0.25) / 0.25;
+            explosionScale = 12 - (phase2 * 10); // Scale from 12 to 2
+            glowIntensity = 5 - (phase2 * 2); // Glow 5 -> 3
           }
-          // Phase 3: Settle (0.6 - 1.0) - smooth to normal
+          // Phase 3: Settle (0.5 - 1.0) - smooth to normal
           else {
-            const phase3 = (progress - 0.6) / 0.4;
+            const phase3 = (progress - 0.5) / 0.5;
             const easeOut = 1 - Math.pow(1 - phase3, 3);
-            explosionScale = 1.5 - (easeOut * 0); // Stay at 1.5
-            glowIntensity = 2 - (easeOut * 1); // Glow 2 -> 1
+            explosionScale = 2 - (easeOut * 0.5); // Scale 2 -> 1.5
+            glowIntensity = 3 - (easeOut * 2); // Glow 3 -> 1
           }
         } else {
           // Animation complete
+          console.log(`✅ Star ${i} explosion complete`);
           newStarAnimationRef.current = null;
         }
       }
