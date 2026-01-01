@@ -6,7 +6,7 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 /**
- * Check if user can submit a new star (1 minute cooldown for testing)
+ * Check if user can submit a new star (30 minutes cooldown)
  * Also checks for suspicious activity (too many attempts)
  */
 export async function canUserSubmit(fingerprintId: string): Promise<{ canSubmit: boolean; remainingTime?: number }> {
@@ -33,9 +33,9 @@ export async function canUserSubmit(fingerprintId: string): Promise<{ canSubmit:
     const now = new Date();
     const hoursSinceOldest = (now.getTime() - oldestOfTen.getTime()) / (1000 * 60 * 60);
     
-    // If 10 submissions in less than 1 hour, block
-    if (hoursSinceOldest < 1) {
-      return { canSubmit: false, remainingTime: 60 };
+    // If 10 submissions in less than 5 hours, block
+    if (hoursSinceOldest < 5) {
+      return { canSubmit: false, remainingTime: 30 };
     }
   }
 
@@ -56,11 +56,11 @@ export async function canUserSubmit(fingerprintId: string): Promise<{ canSubmit:
   const now = new Date();
   const minutesSinceLastSubmission = (now.getTime() - lastSubmission.getTime()) / (1000 * 60);
 
-  if (minutesSinceLastSubmission >= 1) {
+  if (minutesSinceLastSubmission >= 30) {
     return { canSubmit: true };
   }
 
-  const remainingTime = Math.ceil(1 - minutesSinceLastSubmission); // in minutes
+  const remainingTime = Math.ceil(30 - minutesSinceLastSubmission); // in minutes
   return { canSubmit: false, remainingTime };
 }
 

@@ -257,13 +257,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check 24-hour limit
+    // Check 30-minute limit
     const eligibility = await canUserSubmit(fingerprintId);
     
     if (!eligibility.canSubmit) {
+      const remainingMinutes = eligibility.remainingTime || 30;
       return NextResponse.json(
         {
-          error: `You can only add one star every minute. Please wait ${eligibility.remainingTime} second(s) ✨`,
+          error: `You can only add one star every 30 minutes. Please wait ${remainingMinutes} more minute(s) ✨`,
           remainingTime: eligibility.remainingTime,
         },
         { status: 429 }
