@@ -165,38 +165,38 @@ function CameraController({
     };
   }, [scene]);
   
-  // Shooting stars every 5 seconds - ALWAYS active, doesn't stop on interaction
+  // Shooting stars every 5 seconds - NO camera path, just follow shooting stars
   useEffect(() => {
     if (showWelcome || !galaxyReady) {
       return;
     }
     
+    lastInteractionRef.current = Date.now();
     let shootingStarIntervalId: NodeJS.Timeout | null = null;
     
-    // Create shooting star with varied directions
+    const checkIdle = setInterval(() => {
+      const timeSinceLastInteraction = Date.now() - lastInteractionRef.current;
+      
+      if (timeSinceLastInteraction > 5000 && !cinematicActiveRef.current) {
+        console.log('✨ Starting shooting star mode');
+        cinematicActiveRef.current = true;
+        startShootingStarMode();
+      }
+    }, 500);
+    
+    // Create shooting star with smooth camera follow
     const createShootingStar = () => {
       console.log('⭐ Creating shooting star');
-      const trailLength = 18;
+      const trailLength = 18; // More trail points for beauty
       const geometry = new THREE.BufferGeometry();
       const positions = new Float32Array(trailLength * 3);
       
-      // Get camera direction to spawn star in front of view
       const camPos = camera.position.clone();
-      const camDir = new THREE.Vector3();
-      camera.getWorldDirection(camDir);
-      
-      // Spawn star FARTHER in front of camera
-      const forwardDistance = 200 + Math.random() * 150;
-      const sideOffset = (Math.random() - 0.5) * 80;
-      const upOffset = 60 + Math.random() * 40;
-      
-      const right = new THREE.Vector3();
-      right.crossVectors(camDir, new THREE.Vector3(0, 1, 0)).normalize();
-      
-      const startPos = camPos.clone()
-        .add(camDir.clone().multiplyScalar(forwardDistance))
-        .add(right.clone().multiplyScalar(sideOffset))
-        .add(new THREE.Vector3(0, upOffset, 0));
+      const startPos = new THREE.Vector3(
+        camPos.x + (Math.random() - 0.5) * 120,
+        camPos.y + 70 + Math.random() * 50,
+        camPos.z + (Math.random() - 0.5) * 120
+      );
       
       for (let i = 0; i < trailLength; i++) {
         positions[i * 3] = startPos.x;
@@ -207,10 +207,10 @@ function CameraController({
       geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
       
       const material = new THREE.PointsMaterial({
-        color: 0xccddff,
-        size: 2.5,
+        color: 0xffffff,
+        size: 6,
         transparent: true,
-        opacity: 0.8,
+        opacity: 1,
         blending: THREE.AdditiveBlending
       });
       
@@ -218,45 +218,33 @@ function CameraController({
       scene.add(shootingStar);
       shootingStarsRef.current.push(shootingStar);
       
-      // VARIED DIRECTIONS - sometimes down, sometimes right, sometimes diagonal
-      const directionType = Math.floor(Math.random() * 4);
-      let direction: THREE.Vector3;
+      const direction = new THREE.Vector3(
+        (Math.random() - 0.5) * 1.6,
+        -3.0 - Math.random() * 0.8,
+        (Math.random() - 0.5) * 1.6
+      ).normalize();
       
-      switch(directionType) {
-        case 0: // Straight down
-          direction = new THREE.Vector3(
-            (Math.random() - 0.5) * 0.3,
-            -3.5,
-            (Math.random() - 0.5) * 0.3
-          );
-          break;
-        case 1: // Diagonal right-down
-          direction = new THREE.Vector3(
-            2.5 + Math.random() * 0.5,
-            -2.0 - Math.random() * 0.5,
-            (Math.random() - 0.5) * 0.8
-          );
-          break;
-        case 2: // Diagonal left-down
-          direction = new THREE.Vector3(
-            -2.5 - Math.random() * 0.5,
-            -2.0 - Math.random() * 0.5,
-            (Math.random() - 0.5) * 0.8
-          );
-          break;
-        default: // Random diagonal
-          direction = new THREE.Vector3(
-            (Math.random() - 0.5) * 3.0,
-            -2.5 - Math.random() * 1.0,
-            (Math.random() - 0.5) * 3.0
-          );
-      }
-      
-      direction.normalize();
-      
-      const speed = 400; // ULTRA FAST!
-      const distance = 500;
+      const speed = 80;
+      const distance = 220;
       const duration = distance / speed;
+      
+      // Smooth beautiful camera follow
+      gsap.to(camera.position, {
+        x: startPos.x + direction.x * 50,
+        y: startPos.y + direction.y * 28,
+        z: startPos.z + direction.z * 50,
+        duration: duration * 0.9,
+        ease: "power1.inOut",
+        onUpdate: () => controlsRef.current?.update()
+      });
+      
+      gsap.to(controlsRef.current.target, {
+        x: startPos.x + direction.x * 100,
+        y: startPos.y + direction.y * 100,
+        z: startPos.z + direction.z * 100,
+        duration: duration * 0.9,
+        ease: "power1.inOut"
+      });
       
       // Animate trail
       const startTime = Date.now();
@@ -292,15 +280,24 @@ function CameraController({
       animateTrail();
     };
     
-    // Start immediately and continue every 5 seconds - NO STOP on user interaction
-    console.log('✨ Starting continuous shooting stars');
-    createShootingStar(); // First one immediately
-    
-    shootingStarIntervalId = setInterval(() => {
+    // Start shooting star mode - one every 5 seconds
+    const startShootingStarMode = () => {
+      // First one immediately
       createShootingStar();
-    }, 5000);
+      
+      // Then every 5 seconds
+      shootingStarIntervalId = setInterval(() => {
+        if (!cinematicActiveRef.current) {
+          if (shootingStarIntervalId) clearInterval(shootingStarIntervalId);
+          return;
+        }
+        
+        createShootingStar();
+      }, 5000);
+    };
     
     return () => {
+      clearInterval(checkIdle);
       if (shootingStarIntervalId) clearInterval(shootingStarIntervalId);
     };
   }, [camera, scene, galaxyReady, showWelcome]);

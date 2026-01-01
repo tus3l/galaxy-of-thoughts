@@ -61,26 +61,32 @@ function CameraController({
   showWelcome, 
   onWelcomeComplete,
   galaxyReady,
+  allStars
 }: { 
   newStarPosition?: [number, number, number];
   showWelcome?: boolean;
   onWelcomeComplete?: () => void;
   galaxyReady: boolean;
+  allStars: any[];
 }) {
   const { camera, scene } = useThree();
   const controlsRef = useRef<any>(null);
   const [welcomeAnimated, setWelcomeAnimated] = useState(false);
+  const idleTimerRef = useRef<number>(0);
   const lastInteractionRef = useRef<number>(Date.now());
   const cinematicActiveRef = useRef<boolean>(false);
+  const cinematicTimelineRef = useRef<gsap.core.Timeline | null>(null);
   const shootingStarsRef = useRef<THREE.Points[]>([]);
   
   // Welcome animation - zoom out from first star
   useEffect(() => {
     if (showWelcome && !welcomeAnimated && controlsRef.current && galaxyReady) {
+      // ابدأ الكاميرا قريبة جداً من مركز المجرة
       camera.position.set(5, 3, 8);
       controlsRef.current.target.set(0, 0, 0);
       controlsRef.current.update();
       
+      // انتظر قليلاً ثم ابدأ الـ zoom out
       setTimeout(() => {
         gsap.to(camera.position, {
           x: 150,
@@ -113,10 +119,12 @@ function CameraController({
     if (newStarPosition && controlsRef.current && !showWelcome) {
       const [x, y, z] = newStarPosition;
       
+      // حساب موقع الكاميرا (بعيد عن النجمة)
       const starPos = new THREE.Vector3(x, y, z);
       const offset = new THREE.Vector3(30, 20, 40);
       const cameraTarget = starPos.clone().add(offset);
       
+      // GSAP animation للكاميرا
       gsap.to(camera.position, {
         x: cameraTarget.x,
         y: cameraTarget.y,
@@ -128,6 +136,7 @@ function CameraController({
         }
       });
       
+      // GSAP animation للـ target
       gsap.to(controlsRef.current.target, {
         x: starPos.x,
         y: starPos.y,
@@ -142,8 +151,12 @@ function CameraController({
   useEffect(() => {
     const resetIdleTimer = () => {
       lastInteractionRef.current = Date.now();
+      console.log('👆 User interaction - resetting idle timer');
       if (cinematicActiveRef.current) {
+        // Stop cinematic mode when user interacts
+        cinematicTimelineRef.current?.kill();
         cinematicActiveRef.current = false;
+        // Clean up shooting stars
         shootingStarsRef.current.forEach(star => scene.remove(star));
         shootingStarsRef.current = [];
       }
@@ -165,38 +178,126 @@ function CameraController({
     };
   }, [scene]);
   
-  // Shooting stars every 5 seconds - ALWAYS active, doesn't stop on interaction
+  // Cinematic idle camera movement
   useEffect(() => {
-    if (showWelcome || !galaxyReady) {
+    if (showWelcome || !galaxyReady || allStars.length === 0) {
       return;
     }
     
+    lastInteractionRef.current = Date.now();
+    let currentTimelineRef: gsap.core.Timeline | null = null;
     let shootingStarIntervalId: NodeJS.Timeout | null = null;
     
-    // Create shooting star with varied directions
-    const createShootingStar = () => {
-      console.log('⭐ Creating shooting star');
-      const trailLength = 18;
+    const checkIdle = setInterval(() => {
+      const timeSinceLastInteraction = Date.now() - lastInteractionRef.current;
+      
+      if (timeSinceLastInteraction > 5000 && !cinematicActiveRef.current) {
+        console.log('🎬 Starting cinematic mode');
+        cinematicActiveRef.current = true;
+        startCinematicMode();
+      }
+    }, 500);
+    
+    // Function to generate safe path points
+    const generatePathPoints = (startPos: THREE.Vector3, count: number = 5) => {
+      const pathPoints: THREE.Vector3[] = [startPos.clone()];
+      
+      for (let i = 0; i < count; i++) {
+        const lastPoint = pathPoints[pathPoints.length - 1];
+        let safePosFound = false;
+        let attempts = 0;
+        
+        while (!safePosFound && attempts < 20) {
+          const angle = Math.random() * Math.PI * 2;
+          const distance = 35 + Math.random() * 25; // 35-60 units
+          const elevation = (Math.random() - 0.5) * 30;
+          
+          const newPos = new THREE.Vector3(
+            lastPoint.x + Math.cos(angle) * distance,
+            lastPoint.y + elevation,
+            lastPoint.z + Math.sin(angle) * distance
+          );
+          
+          let minDistance = Infinity;
+          allStars.forEach((star: any) => {
+            const starPos = new THREE.Vector3(...star.position);
+            minDistance = Math.min(minDistance, newPos.distanceTo(starPos));
+          });
+          
+          if (minDistance > 25) {
+            pathPoints.push(newPos);
+            safePosFound = true;
+          }
+          attempts++;
+        }
+      }
+      
+      return pathPoints;
+    };
+    
+    // Create timeline for path navigation
+    const createPathTimeline = (pathPoints: THREE.Vector3[]) => {
+      const timeline = gsap.timeline();
+      
+      pathPoints.forEach((point, index) => {
+        if (index === 0) return;
+        
+        // Check if point is behind camera
+        const camDir = camera.getWorldDirection(new THREE.Vector3());
+        const toPoint = point.clone().sub(camera.position).normalize();
+        const dot = camDir.dot(toPoint);
+        
+        // If behind (dot < 0), rotate slowly first
+        if (dot < 0) {
+          timeline.to(controlsRef.current.target, {
+            x: point.x,
+            y: point.y,
+            z: point.z,
+            duration: 3, // Slow rotation
+            ease: "sine.inOut"
+          });
+          timeline.to({}, { duration: 1 }); // 1 second pause
+        }
+        
+        // Move to point - VERY SLOW (45s)
+        timeline.to(camera.position, {
+          x: point.x,
+          y: point.y,
+          z: point.z,
+          duration: 45,
+          ease: "sine.inOut",
+          onUpdate: () => controlsRef.current?.update()
+        });
+        
+        // Move target simultaneously
+        timeline.to(controlsRef.current.target, {
+          x: point.x + (Math.random() - 0.5) * 8,
+          y: point.y + (Math.random() - 0.5) * 6,
+          z: point.z + (Math.random() - 0.5) * 8,
+          duration: 45,
+          ease: "sine.inOut"
+        }, '<');
+        
+        // 3 second pause between points
+        timeline.to({}, { duration: 3 });
+      });
+      
+      return timeline;
+    };
+    
+    // Create shooting star with callback
+    const createShootingStar = (onComplete: () => void) => {
+      console.log('✨ Shooting star spawning...');
+      const trailLength = 12;
       const geometry = new THREE.BufferGeometry();
       const positions = new Float32Array(trailLength * 3);
       
-      // Get camera direction to spawn star in front of view
       const camPos = camera.position.clone();
-      const camDir = new THREE.Vector3();
-      camera.getWorldDirection(camDir);
-      
-      // Spawn star FARTHER in front of camera
-      const forwardDistance = 200 + Math.random() * 150;
-      const sideOffset = (Math.random() - 0.5) * 80;
-      const upOffset = 60 + Math.random() * 40;
-      
-      const right = new THREE.Vector3();
-      right.crossVectors(camDir, new THREE.Vector3(0, 1, 0)).normalize();
-      
-      const startPos = camPos.clone()
-        .add(camDir.clone().multiplyScalar(forwardDistance))
-        .add(right.clone().multiplyScalar(sideOffset))
-        .add(new THREE.Vector3(0, upOffset, 0));
+      const startPos = new THREE.Vector3(
+        camPos.x + (Math.random() - 0.5) * 80,
+        camPos.y + 50 + Math.random() * 30,
+        camPos.z + (Math.random() - 0.5) * 80
+      );
       
       for (let i = 0; i < trailLength; i++) {
         positions[i * 3] = startPos.x;
@@ -207,10 +308,10 @@ function CameraController({
       geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
       
       const material = new THREE.PointsMaterial({
-        color: 0xccddff,
-        size: 2.5,
+        color: 0xffffff,
+        size: 4,
         transparent: true,
-        opacity: 0.8,
+        opacity: 1,
         blending: THREE.AdditiveBlending
       });
       
@@ -218,45 +319,33 @@ function CameraController({
       scene.add(shootingStar);
       shootingStarsRef.current.push(shootingStar);
       
-      // VARIED DIRECTIONS - sometimes down, sometimes right, sometimes diagonal
-      const directionType = Math.floor(Math.random() * 4);
-      let direction: THREE.Vector3;
+      const direction = new THREE.Vector3(
+        (Math.random() - 0.5) * 1.2,
+        -2.5 - Math.random() * 0.5,
+        (Math.random() - 0.5) * 1.2
+      ).normalize();
       
-      switch(directionType) {
-        case 0: // Straight down
-          direction = new THREE.Vector3(
-            (Math.random() - 0.5) * 0.3,
-            -3.5,
-            (Math.random() - 0.5) * 0.3
-          );
-          break;
-        case 1: // Diagonal right-down
-          direction = new THREE.Vector3(
-            2.5 + Math.random() * 0.5,
-            -2.0 - Math.random() * 0.5,
-            (Math.random() - 0.5) * 0.8
-          );
-          break;
-        case 2: // Diagonal left-down
-          direction = new THREE.Vector3(
-            -2.5 - Math.random() * 0.5,
-            -2.0 - Math.random() * 0.5,
-            (Math.random() - 0.5) * 0.8
-          );
-          break;
-        default: // Random diagonal
-          direction = new THREE.Vector3(
-            (Math.random() - 0.5) * 3.0,
-            -2.5 - Math.random() * 1.0,
-            (Math.random() - 0.5) * 3.0
-          );
-      }
-      
-      direction.normalize();
-      
-      const speed = 400; // ULTRA FAST!
-      const distance = 500;
+      const speed = 70;
+      const distance = 180;
       const duration = distance / speed;
+      
+      // Follow shooting star
+      gsap.to(camera.position, {
+        x: startPos.x + direction.x * 50,
+        y: startPos.y + direction.y * 30,
+        z: startPos.z + direction.z * 50,
+        duration: duration * 0.8,
+        ease: "power2.out",
+        onUpdate: () => controlsRef.current?.update()
+      });
+      
+      gsap.to(controlsRef.current.target, {
+        x: startPos.x + direction.x * 80,
+        y: startPos.y + direction.y * 80,
+        z: startPos.z + direction.z * 80,
+        duration: duration * 0.8,
+        ease: "power2.out"
+      });
       
       // Animate trail
       const startTime = Date.now();
@@ -267,6 +356,9 @@ function CameraController({
           scene.remove(shootingStar);
           const idx = shootingStarsRef.current.indexOf(shootingStar);
           if (idx > -1) shootingStarsRef.current.splice(idx, 1);
+          
+          // Wait 1 second then call onComplete
+          setTimeout(onComplete, 1000);
           return;
         }
         
@@ -284,7 +376,7 @@ function CameraController({
         positions[2] = currentPos.z;
         
         geometry.attributes.position.needsUpdate = true;
-        material.opacity = 1 - (elapsed / duration) * 0.5;
+        material.opacity = 1 - (elapsed / duration) * 0.7;
         
         requestAnimationFrame(animateTrail);
       };
@@ -292,18 +384,48 @@ function CameraController({
       animateTrail();
     };
     
-    // Start immediately and continue every 5 seconds - NO STOP on user interaction
-    console.log('✨ Starting continuous shooting stars');
-    createShootingStar(); // First one immediately
-    
-    shootingStarIntervalId = setInterval(() => {
-      createShootingStar();
-    }, 5000);
+    // Start cinematic mode
+    const startCinematicMode = () => {
+      console.log('🎬 Generating initial path...');
+      const initialPoints = generatePathPoints(camera.position.clone(), 5);
+      currentTimelineRef = createPathTimeline(initialPoints);
+      cinematicTimelineRef.current = currentTimelineRef;
+      
+      // First shooting star after 15 seconds, then every 20 seconds
+      setTimeout(() => {
+        console.log('⭐ Creating first shooting star');
+        createShootingStar(() => {
+          const newPoints = generatePathPoints(camera.position.clone(), 5);
+          currentTimelineRef = createPathTimeline(newPoints);
+          cinematicTimelineRef.current = currentTimelineRef;
+        });
+        
+        // Shooting star every 20 seconds after first one
+        shootingStarIntervalId = setInterval(() => {
+          if (!cinematicActiveRef.current) {
+            if (shootingStarIntervalId) clearInterval(shootingStarIntervalId);
+            return;
+          }
+          
+          console.log('⭐ Creating shooting star');
+          currentTimelineRef?.pause();
+          
+          createShootingStar(() => {
+            const newPoints = generatePathPoints(camera.position.clone(), 5);
+            currentTimelineRef = createPathTimeline(newPoints);
+            cinematicTimelineRef.current = currentTimelineRef;
+          });
+        }, 20000);
+      }, 15000);
+    };
     
     return () => {
+      clearInterval(checkIdle);
       if (shootingStarIntervalId) clearInterval(shootingStarIntervalId);
+      currentTimelineRef?.kill();
+      cinematicTimelineRef.current?.kill();
     };
-  }, [camera, scene, galaxyReady, showWelcome]);
+  }, [camera, scene, galaxyReady, showWelcome, allStars.length]);
   
   return (
     <OrbitControls
@@ -340,7 +462,7 @@ export default function Scene({ onStarClick, newStarPosition, refreshTrigger, ta
   return (
     <Canvas
       camera={{
-        position: [5, 3, 8],
+        position: [5, 3, 8], // ابدأ قريب للرسالة الترحيبية
         fov: 75,
       }}
       dpr={[1, 2]}
@@ -355,6 +477,7 @@ export default function Scene({ onStarClick, newStarPosition, refreshTrigger, ta
       <Suspense fallback={null}>
         <CrosshairRemover />
         
+        {/* Deep Space Environment */}
         <color attach="background" args={['#000510']} />
         <fog attach="fog" args={['#000510', 100, 2000]} />
         
@@ -364,12 +487,14 @@ export default function Scene({ onStarClick, newStarPosition, refreshTrigger, ta
           blur={0.9}
         />
         
+        {/* Cinematic Space Lighting */}
         <ambientLight intensity={0.15} color="#0a1428" />
         <directionalLight position={[50, 50, 50]} intensity={0.4} color="#4466ff" />
         <pointLight position={[100, 100, 100]} intensity={1.5} color="#6699ff" decay={2} />
         <pointLight position={[-80, 50, -80]} intensity={1.0} color="#3355cc" decay={2} />
         <pointLight position={[0, -100, 50]} intensity={0.6} color="#1a2244" decay={2} />
         
+        {/* Background stars for depth */}
         <BackgroundStars />
         
         <Galaxy 
@@ -381,6 +506,7 @@ export default function Scene({ onStarClick, newStarPosition, refreshTrigger, ta
           onStarsLoaded={setAllStars}
         />
         
+        {/* Shooting stars for beauty */}
         <ShootingStars />
 
         <CameraController 
@@ -388,6 +514,7 @@ export default function Scene({ onStarClick, newStarPosition, refreshTrigger, ta
           showWelcome={showWelcome}
           onWelcomeComplete={onWelcomeComplete}
           galaxyReady={galaxyReady}
+          allStars={allStars}
         />
 
         <EffectComposer>

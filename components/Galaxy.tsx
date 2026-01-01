@@ -12,21 +12,25 @@ export default function Galaxy({
   newStarPosition, 
   refreshTrigger,
   targetStarId,
-  onReady
+  onReady,
+  onStarsLoaded
 }: Omit<GalaxyProps, 'starCount' | 'starData'> & { 
   newStarPosition?: [number, number, number];
   refreshTrigger?: number;
   targetStarId?: number | null;
   onReady?: () => void;
+  onStarsLoaded?: (stars: any[]) => void;
 }) {
   const meshRef = useRef<THREE.InstancedMesh>(null);
   const [hovered, setHovered] = useState<number | null>(null);
   const originalScalesRef = useRef<Float32Array>();
   const visibleStarsRef = useRef<number[]>([]);
-  const { camera, gl, raycaster, pointer, size } = useThree();
+  const { camera, gl, raycaster, pointer, size, scene } = useThree();
   const [realStars, setRealStars] = useState<StarData[]>([]);
   const newStarAnimationRef = useRef<{ index: number; startTime: number } | null>(null);
   const instanceColorsRef = useRef<Float32Array>();
+  const particlesRef = useRef<THREE.Points | null>(null);
+  const shockwaveRef = useRef<THREE.Mesh | null>(null);
   
   // Fetch real stars from Supabase only
   useEffect(() => {
@@ -70,6 +74,13 @@ export default function Galaxy({
   
   // Use real stars only
   const allStars = realStars;
+  
+  // Pass stars to parent
+  useEffect(() => {
+    if (allStars.length > 0 && onStarsLoaded) {
+      onStarsLoaded(allStars);
+    }
+  }, [allStars, onStarsLoaded]);
   
   // Manual click detection with DOM events
   useEffect(() => {
@@ -162,6 +173,168 @@ export default function Galaxy({
         index: -1, // Will be updated when star is loaded
         startTime: Date.now()
       };
+      
+      // Create cosmic dust particles
+      if (particlesRef.current) {
+        scene.remove(particlesRef.current);
+      }
+      
+      const particleCount = 600; // Massive dust cloud
+      const particleGeometry = new THREE.BufferGeometry();
+      const particlePositions = new Float32Array(particleCount * 3);
+      const particleVelocities: THREE.Vector3[] = [];
+      
+      const [targetX, targetY, targetZ] = newStarPosition;
+      
+      // Spawn particles in sphere around target
+      for (let i = 0; i < particleCount; i++) {
+        const radius = 50 + Math.random() * 40; // 50-90 units away - very spread out
+        const theta = Math.random() * Math.PI * 2;
+        const phi = Math.acos(2 * Math.random() - 1);
+        
+        particlePositions[i * 3] = targetX + radius * Math.sin(phi) * Math.cos(theta);
+        particlePositions[i * 3 + 1] = targetY + radius * Math.sin(phi) * Math.sin(theta);
+        particlePositions[i * 3 + 2] = targetZ + radius * Math.cos(phi);
+        
+        particleVelocities.push(new THREE.Vector3());
+      }
+      
+      particleGeometry.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+      
+      const particleMaterial = new THREE.PointsMaterial({
+        color: 0xffffff, // Pure white dust
+        size: 0.4, // Tiny dust particles
+        transparent: true,
+        opacity: 1.0,
+        blending: THREE.AdditiveBlending,
+        sizeAttenuation: true // Size based on distance
+      });
+      
+      const particles = new THREE.Points(particleGeometry, particleMaterial);
+      scene.add(particles);
+      particlesRef.current = particles;
+      
+      // Animate particles converging
+      const particleStartTime = Date.now();
+      const particleAnimation = () => {
+        if (!particlesRef.current) return;
+        
+        const elapsed = Date.now() - particleStartTime;
+        if (elapsed > 3500) {
+          // Remove particles after gathering (3.5 seconds)
+          scene.remove(particlesRef.current);
+          particlesRef.current = null;
+          return;
+        }
+        
+        const progress = elapsed / 3500;
+        const positions = particlesRef.current.geometry.attributes.position.array as Float32Array;
+        
+        for (let i = 0; i < particleCount; i++) {
+          const idx = i * 3;
+          const currentX = positions[idx];
+          const currentY = positions[idx + 1];
+          const currentZ = positions[idx + 2];
+          
+          // Accelerate toward target (slower for 3.5 seconds)
+          const dx = targetX - currentX;
+          const dy = targetY - currentY;
+          const dz = targetZ - currentZ;
+          
+          const acceleration = Math.pow(progress, 2) * 0.3; // Slower convergence over 3.5 seconds
+          
+          positions[idx] += dx * acceleration;
+          positions[idx + 1] += dy * acceleration;
+          positions[idx + 2] += dz * acceleration;
+        }
+        
+        particlesRef.current.geometry.attributes.position.needsUpdate = true;
+        
+        // Fade out particles gradually
+        const material = particlesRef.current.material as THREE.PointsMaterial;
+        material.opacity = 1.0 * (1 - Math.pow(progress, 2)); // Slower fade
+        
+        requestAnimationFrame(particleAnimation);
+      };
+      
+      particleAnimation();
+      
+      // Create shockwave at ignition time (2.2s)
+      setTimeout(() => {
+        const shockwaveGeometry = new THREE.RingGeometry(0.1, 0.5, 32);
+        const shockwaveMaterial = new THREE.MeshBasicMaterial({
+          color: 0xffffff,
+          transparent: true,
+          opacity: 0.6,
+          side: THREE.DoubleSide
+        });
+        
+        const shockwave = new THREE.Mesh(shockwaveGeometry, shockwaveMaterial);
+        shockwave.position.set(targetX, targetY, targetZ);
+        
+        // Orient toward camera
+        shockwave.lookAt(camera.position);
+        
+        scene.add(shockwave);
+        shockwaveRef.current = shockwave;
+        
+        // Animate shockwave expanding
+        const shockwaveStartTime = Date.now();
+        const shockwaveDuration = 1000; // 1 second
+        
+        const shockwaveAnimation = () => {
+          if (!shockwaveRef.current) return;
+          
+          const elapsed = Date.now() - shockwaveStartTime;
+          if (elapsed > shockwaveDuration) {
+            scene.remove(shockwaveRef.current);
+            shockwaveRef.current = null;
+            return;
+          }
+          
+          const progress = elapsed / shockwaveDuration;
+          const scale = 1 + progress * 50; // Expand to 50 units
+          shockwaveRef.current.scale.set(scale, scale, 1);
+          
+          // Fade out
+          const material = shockwaveRef.current.material as THREE.MeshBasicMaterial;
+          material.opacity = 0.6 * (1 - progress);
+          
+          // Push nearby stars
+          if (meshRef.current) {
+            const shockwaveRadius = scale * 0.5;
+            const dummy = new THREE.Object3D();
+            
+            allStars.forEach((star, i) => {
+              const [sx, sy, sz] = star.position;
+              const dx = sx - targetX;
+              const dy = sy - targetY;
+              const dz = sz - targetZ;
+              const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+              
+              if (distance < shockwaveRadius && distance > 0.1) {
+                // Push force inversely proportional to distance
+                const force = (1 - (distance / shockwaveRadius)) * 0.5 * (1 - progress);
+                
+                const pushX = (dx / distance) * force;
+                const pushY = (dy / distance) * force;
+                const pushZ = (dz / distance) * force;
+                
+                dummy.position.set(sx + pushX, sy + pushY, sz + pushZ);
+                dummy.scale.setScalar(1);
+                dummy.updateMatrix();
+                meshRef.current!.setMatrixAt(i, dummy.matrix);
+              }
+            });
+            
+            meshRef.current.instanceMatrix.needsUpdate = true;
+          }
+          
+          requestAnimationFrame(shockwaveAnimation);
+        };
+        
+        shockwaveAnimation();
+      }, 4300); // Start at ignition moment (after 3.5s dust gathering)
       
       // After a short delay, find the actual star index
       setTimeout(() => {
@@ -321,26 +494,38 @@ export default function Galaxy({
       
       if (newStarAnimationRef.current && newStarAnimationRef.current.index === i) {
         const elapsed = Date.now() - newStarAnimationRef.current.startTime;
-        const animDuration = 3000; // 3 seconds - أطول للوميض الناعم
+        const totalDuration = 6000; // 6 seconds total
         
-        if (elapsed < animDuration) {
-          const progress = elapsed / animDuration;
-          
-          // وميض ناعم وواقعي - مثل نبضات نجمة حقيقية
-          // استخدام sine wave للوميض الطبيعي
-          const pulseFrequency = 3; // 3 نبضات كاملة
-          const pulse = Math.sin(progress * Math.PI * pulseFrequency);
-          
-          // الوميض يخف تدريجياً مع الوقت
-          const fadeOut = 1 - (progress * 0.7); // يخف 70% مع الوقت
-          
-          // Scale: 1.5 → 2.5 (زيادة بسيطة فقط)
-          explosionScale = 1 + (pulse * 0.5 * fadeOut);
-          
-          // Glow: 1 → 2.5 (توهج خفيف)
-          glowIntensity = 1 + (pulse * 1.5 * fadeOut);
+        // Phase 1: Dust gathering (0-3.5s)
+        // Phase 2: Compression (3.5-4.3s)
+        // Phase 3: Ignition + Shockwave (4.3-4.6s)
+        // Phase 4: Settle (4.6-6s)
+        
+        if (elapsed < 3500) {
+          // Dust gathering - particles converge (handled by particle system)
+          explosionScale = 0.1; // Star is tiny while dust gathers
+          glowIntensity = 0.1;
+        } else if (elapsed < 4300) {
+          // Compression phase
+          const compressProgress = (elapsed - 3500) / 800;
+          explosionScale = 0.1 - (compressProgress * 0.05); // Compress smaller
+          glowIntensity = 0.5 + (compressProgress * 1.5); // Brightness increases
+        } else if (elapsed < 4600) {
+          // Ignition burst!
+          const burstProgress = (elapsed - 4300) / 300;
+          const burst = Math.pow(1 - burstProgress, 2); // Exponential decay
+          explosionScale = 0.05 + (burst * 4); // Massive burst to 4x
+          glowIntensity = 3 + (burst * 5); // Intense flash
+        } else if (elapsed < totalDuration) {
+          // Settle to normal
+          const settleProgress = (elapsed - 4600) / 1400;
+          const easeOut = 1 - Math.pow(1 - settleProgress, 3);
+          explosionScale = 1 + ((4 - 1) * (1 - easeOut));
+          glowIntensity = 1 + ((8 - 1) * (1 - easeOut));
         } else {
           // Animation complete
+          explosionScale = 1;
+          glowIntensity = 1;
           newStarAnimationRef.current = null;
         }
       }
