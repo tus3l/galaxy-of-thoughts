@@ -6,7 +6,19 @@ import * as THREE from 'three';
 import { GalaxyProps, StarData } from '@/types';
 import { supabase } from '@/lib/supabase';
 
-export default function Galaxy({ onStarClick, onStarHover, newStarPosition, refreshTrigger }: Omit<GalaxyProps, 'starCount' | 'starData'> & { newStarPosition?: [number, number, number], refreshTrigger?: number }) {
+export default function Galaxy({ 
+  onStarClick, 
+  onStarHover, 
+  newStarPosition, 
+  refreshTrigger,
+  targetStarId,
+  onReady
+}: Omit<GalaxyProps, 'starCount' | 'starData'> & { 
+  newStarPosition?: [number, number, number];
+  refreshTrigger?: number;
+  targetStarId?: number | null;
+  onReady?: () => void;
+}) {
   const meshRef = useRef<THREE.InstancedMesh>(null);
   const [hovered, setHovered] = useState<number | null>(null);
   const originalScalesRef = useRef<Float32Array>();
@@ -47,14 +59,14 @@ export default function Galaxy({ onStarClick, onStarHover, newStarPosition, refr
             };
           });
         setRealStars(formattedStars);
-        console.log('✨ Loaded stars:', formattedStars.length);
+        onReady?.(); // إشعار Scene أن المجرة جاهزة
       } else if (error) {
         console.error('Error fetching stars:', error);
       }
     };
     
     fetchStars();
-  }, [refreshTrigger]); // Re-fetch when refreshTrigger changes
+  }, [refreshTrigger, onReady]); // Re-fetch when refreshTrigger changes
   
   // Use real stars only
   const allStars = realStars;
@@ -64,10 +76,7 @@ export default function Galaxy({ onStarClick, onStarHover, newStarPosition, refr
     const canvas = gl.domElement;
     
     const handleCanvasClick = (event: MouseEvent | TouchEvent) => {
-      console.log('🖱️ Canvas clicked!', event.type);
-      
       if (!meshRef.current || allStars.length === 0) {
-        console.log('❌ No mesh or stars');
         return;
       }
       
@@ -87,52 +96,32 @@ export default function Galaxy({ onStarClick, onStarHover, newStarPosition, refr
       const x = ((clientX - rect.left) / rect.width) * 2 - 1;
       const y = -((clientY - rect.top) / rect.height) * 2 + 1;
       
-      console.log('📍 Click coords:', { x, y, clientX, clientY });
-      
       // Make sure instanceMatrix is updated
       if (meshRef.current.instanceMatrix.needsUpdate === false) {
-        console.log('⚠️ instanceMatrix needs update!');
         meshRef.current.instanceMatrix.needsUpdate = true;
       }
       
       // Update bounding sphere for raycasting
       if (meshRef.current.geometry.boundingSphere === null) {
         meshRef.current.geometry.computeBoundingSphere();
-        console.log('🔵 Computing bounding sphere');
       }
-      
-      console.log('📏 Mesh info:', {
-        position: meshRef.current.position,
-        visible: meshRef.current.visible,
-        instanceCount: allStars.length,
-        boundingSphere: meshRef.current.geometry.boundingSphere
-      });
       
       // Setup raycaster
       const mouseRaycaster = new THREE.Raycaster();
-      // Increase raycaster threshold for easier clicking
       mouseRaycaster.params.Points = { threshold: 5 };
       mouseRaycaster.setFromCamera(new THREE.Vector2(x, y), camera);
       
       // Check intersection with instancedMesh
       const intersects = mouseRaycaster.intersectObject(meshRef.current, false);
-      console.log('🎯 Intersections:', intersects.length);
       
       if (intersects.length === 0) {
-        console.log('🔍 Debugging: Testing ray direction and camera');
-        console.log('Camera position:', camera.position);
-        console.log('Ray origin:', mouseRaycaster.ray.origin);
-        console.log('Ray direction:', mouseRaycaster.ray.direction);
-        
         // Try to check all stars manually
-        const sphereGeometry = new THREE.SphereGeometry(4, 16, 16);
         let closestDistance = Infinity;
         let closestIndex = -1;
         
         allStars.forEach((star, index) => {
           const starPos = new THREE.Vector3(...star.position);
           const distance = mouseRaycaster.ray.distanceToPoint(starPos);
-          console.log(`Star ${index} at`, star.position, 'distance to ray:', distance);
           if (distance < closestDistance && distance < 10) {
             closestDistance = distance;
             closestIndex = index;
@@ -140,7 +129,6 @@ export default function Galaxy({ onStarClick, onStarHover, newStarPosition, refr
         });
         
         if (closestIndex >= 0) {
-          console.log('🎯 Found closest star manually!', closestIndex);
           onStarClick?.(allStars[closestIndex]);
           return;
         }
@@ -149,15 +137,11 @@ export default function Galaxy({ onStarClick, onStarHover, newStarPosition, refr
       if (intersects.length > 0) {
         const intersection = intersects[0];
         const instanceId = intersection.instanceId;
-        console.log('✨ Hit star instance:', instanceId);
         
         if (instanceId !== undefined && instanceId < allStars.length) {
           const star = allStars[instanceId];
-          console.log('🌟 Opening star:', star);
           onStarClick?.(star);
         }
-      } else {
-        console.log('❌ No intersection');
       }
     };
     
@@ -173,9 +157,6 @@ export default function Galaxy({ onStarClick, onStarHover, newStarPosition, refr
   // Move camera to new star when created
   useEffect(() => {
     if (newStarPosition) {
-      console.log('🎆 New star created at:', newStarPosition);
-      console.log('📊 Current stars count:', allStars.length);
-      
       // Start animation immediately when position is set
       newStarAnimationRef.current = {
         index: -1, // Will be updated when star is loaded
@@ -186,7 +167,6 @@ export default function Galaxy({ onStarClick, onStarHover, newStarPosition, refr
       setTimeout(() => {
         if (allStars.length > 0) {
           const newStarIndex = allStars.length - 1;
-          console.log('🌟 Setting animation for star index:', newStarIndex);
           if (newStarAnimationRef.current) {
             newStarAnimationRef.current.index = newStarIndex;
           }
@@ -217,6 +197,36 @@ export default function Galaxy({ onStarClick, onStarHover, newStarPosition, refr
     }
   }, [newStarPosition, camera]);
   
+  // تمييز النجمة المستهدفة عند البحث
+  useEffect(() => {
+    if (targetStarId !== null && targetStarId !== undefined) {
+      const starIndex = allStars.findIndex(s => s.id === targetStarId);
+      
+      if (starIndex !== -1) {
+        // تشغيل أنيميشن خاص للنجمة المستهدفة
+        newStarAnimationRef.current = {
+          index: starIndex,
+          startTime: Date.now()
+        };
+        
+        // بعد 3 ثواني، افتح النجمة مرة واحدة فقط
+        const openTimer = setTimeout(() => {
+          const star = allStars[starIndex];
+          onStarClick?.(star);
+          
+          // إيقاف الأنيميشن بعد الفتح
+          setTimeout(() => {
+            newStarAnimationRef.current = null;
+          }, 100);
+        }, 3000);
+        
+        return () => {
+          clearTimeout(openTimer);
+        };
+      }
+    }
+  }, [targetStarId, allStars, onStarClick]);
+  
   // Show all stars (no limit for now since we only show real ones)
   const maxVisibleStars = Math.max(allStars.length, 10); // At least 10 instances
   
@@ -232,7 +242,6 @@ export default function Galaxy({ onStarClick, onStarHover, newStarPosition, refr
         colors[i * 3] = color.r;
         colors[i * 3 + 1] = color.g;
         colors[i * 3 + 2] = color.b;
-        console.log(`🎨 Star ${i} color:`, star.color?.getHexString());
       });
       
       // Fill remaining slots with white
@@ -252,7 +261,6 @@ export default function Galaxy({ onStarClick, onStarHover, newStarPosition, refr
           new THREE.InstancedBufferAttribute(colors, 3)
         );
         geometry.attributes.color.needsUpdate = true;
-        console.log('✅ Colors applied to geometry');
       }
     }
   }, [allStars, maxVisibleStars]);
@@ -313,34 +321,26 @@ export default function Galaxy({ onStarClick, onStarHover, newStarPosition, refr
       
       if (newStarAnimationRef.current && newStarAnimationRef.current.index === i) {
         const elapsed = Date.now() - newStarAnimationRef.current.startTime;
-        const animDuration = 2000; // 2 seconds explosion animation
+        const animDuration = 3000; // 3 seconds - أطول للوميض الناعم
         
         if (elapsed < animDuration) {
           const progress = elapsed / animDuration;
-          console.log(`💥 Star ${i} explosion progress:`, progress.toFixed(2));
           
-          // Phase 1: Explosion (0 - 0.25) - rapid expansion with bright flash
-          if (progress < 0.25) {
-            const phase1 = progress / 0.25;
-            explosionScale = 0.1 + (phase1 * 12); // Scale from 0.1 to 12
-            glowIntensity = 15 - (phase1 * 10); // Intense glow 15 -> 5
-          }
-          // Phase 2: Contraction (0.25 - 0.5) - pull back
-          else if (progress < 0.5) {
-            const phase2 = (progress - 0.25) / 0.25;
-            explosionScale = 12 - (phase2 * 10); // Scale from 12 to 2
-            glowIntensity = 5 - (phase2 * 2); // Glow 5 -> 3
-          }
-          // Phase 3: Settle (0.5 - 1.0) - smooth to normal
-          else {
-            const phase3 = (progress - 0.5) / 0.5;
-            const easeOut = 1 - Math.pow(1 - phase3, 3);
-            explosionScale = 2 - (easeOut * 0.5); // Scale 2 -> 1.5
-            glowIntensity = 3 - (easeOut * 2); // Glow 3 -> 1
-          }
+          // وميض ناعم وواقعي - مثل نبضات نجمة حقيقية
+          // استخدام sine wave للوميض الطبيعي
+          const pulseFrequency = 3; // 3 نبضات كاملة
+          const pulse = Math.sin(progress * Math.PI * pulseFrequency);
+          
+          // الوميض يخف تدريجياً مع الوقت
+          const fadeOut = 1 - (progress * 0.7); // يخف 70% مع الوقت
+          
+          // Scale: 1.5 → 2.5 (زيادة بسيطة فقط)
+          explosionScale = 1 + (pulse * 0.5 * fadeOut);
+          
+          // Glow: 1 → 2.5 (توهج خفيف)
+          glowIntensity = 1 + (pulse * 1.5 * fadeOut);
         } else {
           // Animation complete
-          console.log(`✅ Star ${i} explosion complete`);
           newStarAnimationRef.current = null;
         }
       }
@@ -376,7 +376,6 @@ export default function Galaxy({ onStarClick, onStarHover, newStarPosition, refr
 
   // Interaction handlers
   const handleClick = (event: any) => {
-    console.log('👆 Click event received:', event);
     event.stopPropagation();
     const instanceId = event.instanceId;
     console.log('🖱️ Clicked instance:', instanceId, 'Total stars:', allStars.length);
@@ -424,7 +423,6 @@ export default function Galaxy({ onStarClick, onStarHover, newStarPosition, refr
       args={[undefined, undefined, maxVisibleStars]}
       onClick={handleClick}
       onPointerDown={(e) => {
-        console.log('👇 Pointer down on star');
         e.stopPropagation();
       }}
       onPointerUp={handleClick}
@@ -435,12 +433,22 @@ export default function Galaxy({ onStarClick, onStarHover, newStarPosition, refr
       <sphereGeometry args={[4, 16, 16]} />
       <meshStandardMaterial 
         vertexColors
-        emissive="#ffffff"
         emissiveIntensity={1.5}
-        color="#ffffff"
-        transparent
         toneMapped={false}
+        transparent
         depthWrite={true}
+        onBeforeCompile={(shader) => {
+          // تعديل الـ shader ليستخدم vertex colors كـ emissive أيضاً
+          shader.fragmentShader = shader.fragmentShader.replace(
+            '#include <color_fragment>',
+            `
+            #include <color_fragment>
+            // استخدام vertex color كـ emissive
+            vec3 emissiveColor = vColor * 1.5;
+            totalEmissiveRadiance = emissiveColor;
+            `
+          );
+        }}
       />
     </instancedMesh>
   );

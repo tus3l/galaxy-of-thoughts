@@ -5,6 +5,8 @@ import { Suspense, useState, useEffect } from 'react';
 import LoadingScreen from '@/components/LoadingScreen';
 import MessageOverlay from '@/components/MessageOverlay';
 import AddStarModal from '@/components/AddStarModal';
+import SearchStar from '@/components/SearchStar';
+import WelcomeMessage from '@/components/WelcomeMessage';
 import { StarData } from '@/types';
 
 // Dynamically import the 3D scene to avoid SSR issues
@@ -17,9 +19,12 @@ export default function Home() {
   const [selectedStar, setSelectedStar] = useState<StarData | null>(null);
   const [isOverlayVisible, setIsOverlayVisible] = useState(false);
   const [isAddStarModalVisible, setIsAddStarModalVisible] = useState(false);
+  const [isSearchVisible, setIsSearchVisible] = useState(false);
   const [totalStars, setTotalStars] = useState<number>(0);
   const [newStarPosition, setNewStarPosition] = useState<[number, number, number] | undefined>(undefined);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [targetStarId, setTargetStarId] = useState<number | null>(null);
+  const [showWelcome, setShowWelcome] = useState(true);
 
   // Fetch total stars count
   const fetchStarsCount = async () => {
@@ -38,7 +43,6 @@ export default function Home() {
   }, []);
 
   const handleStarClick = (star: StarData) => {
-    console.log('👆 Star clicked in page.tsx:', star);
     setSelectedStar(star);
     setIsOverlayVisible(true);
   };
@@ -49,18 +53,14 @@ export default function Home() {
   };
 
   const handleAddStarSuccess = (star?: any) => {
-    console.log('🌟 New star data:', star);
-    
     // Update counter immediately
     setTotalStars(prev => prev + 1);
     
     // Set new star position to animate camera AND refresh stars immediately
     if (star && star.position) {
-      console.log('📍 Moving camera to:', star.position);
       setNewStarPosition(star.position);
       
       // Refresh stars IMMEDIATELY to trigger explosion animation
-      console.log('✨ Refreshing stars list for explosion...');
       setRefreshTrigger(prev => prev + 1);
       
       // Fetch actual count after a short delay to ensure sync
@@ -68,20 +68,38 @@ export default function Home() {
         fetchStarsCount();
       }, 1000);
     } else {
-      console.error('❌ No position in star data:', star);
       // Refresh manually if no position
       setRefreshTrigger(prev => prev + 1);
       fetchStarsCount();
     }
   };
 
+  const handleStarFound = (star: any) => {
+    // تحديد الـ ID للانتقال إليه
+    setTargetStarId(star.id);
+    setNewStarPosition(star.position);
+    
+    // مسح targetStarId بعد 3.5 ثانية لتجنب إعادة الفتح
+    setTimeout(() => {
+      setTargetStarId(null);
+    }, 3500);
+  };
+
   return (
     <main className="w-screen h-screen relative" style={{ height: '100dvh', width: '100dvw' }}>
+      {/* Welcome Message */}
+      {showWelcome && (
+        <WelcomeMessage onComplete={() => setShowWelcome(false)} />
+      )}
+      
       <Suspense fallback={<LoadingScreen />}>
         <Scene 
           onStarClick={handleStarClick}
           newStarPosition={newStarPosition}
           refreshTrigger={refreshTrigger}
+          targetStarId={targetStarId}
+          showWelcome={showWelcome}
+          onWelcomeComplete={() => setShowWelcome(false)}
         />
       </Suspense>
       
@@ -98,6 +116,14 @@ export default function Home() {
         onClose={() => setIsAddStarModalVisible(false)}
         onSuccess={handleAddStarSuccess}
       />
+
+      {/* Search Modal */}
+      {isSearchVisible && (
+        <SearchStar
+          onStarFound={handleStarFound}
+          onClose={() => setIsSearchVisible(false)}
+        />
+      )}
       
       {/* HUD Overlay */}
       <div className="absolute top-0 left-0 w-full h-full pointer-events-none z-10">
@@ -125,8 +151,19 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Add Star Button */}
-        <div className="absolute bottom-4 md:bottom-8 right-4 md:right-8 pointer-events-auto">
+        {/* Buttons Container - Right Side */}
+        <div className="absolute bottom-4 md:bottom-8 right-4 md:right-8 pointer-events-auto flex flex-col gap-3">
+          {/* Search Button */}
+          <button 
+            onClick={() => setIsSearchVisible(true)}
+            className="glass-panel px-4 md:px-6 py-2 md:py-3 hover:bg-white/10 transition-all duration-300 transform hover:scale-105 active:scale-95"
+          >
+            <span className="text-sm md:text-base font-semibold bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
+              🔍 Search Star
+            </span>
+          </button>
+
+          {/* Add Star Button */}
           <button 
             onClick={() => setIsAddStarModalVisible(true)}
             className="glass-panel px-4 md:px-8 py-3 md:py-4 hover:bg-white/10 transition-all duration-300 transform hover:scale-105 active:scale-95"

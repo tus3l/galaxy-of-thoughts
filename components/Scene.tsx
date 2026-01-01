@@ -1,10 +1,11 @@
 'use client';
 
 import { Canvas, useThree, useFrame } from '@react-three/fiber';
-import { Suspense, useRef, useEffect } from 'react';
+import { Suspense, useRef, useEffect, useState } from 'react';
 import { OrbitControls, Environment } from '@react-three/drei';
 import { EffectComposer, Bloom } from '@react-three/postprocessing';
 import * as THREE from 'three';
+import gsap from 'gsap';
 import Galaxy from './Galaxy';
 import ShootingStars from './ShootingStars';
 import BackgroundStars from './BackgroundStars';
@@ -49,36 +50,95 @@ interface SceneProps {
   onStarClick?: (star: StarData) => void;
   newStarPosition?: [number, number, number];
   refreshTrigger?: number;
+  targetStarId?: number | null;
+  showWelcome?: boolean;
+  onWelcomeComplete?: () => void;
 }
 
-// Component to update OrbitControls target
-function CameraController({ newStarPosition }: { newStarPosition?: [number, number, number] }) {
+// Component to update OrbitControls target with GSAP
+function CameraController({ 
+  newStarPosition, 
+  showWelcome, 
+  onWelcomeComplete,
+  galaxyReady 
+}: { 
+  newStarPosition?: [number, number, number];
+  showWelcome?: boolean;
+  onWelcomeComplete?: () => void;
+  galaxyReady: boolean;
+}) {
+  const { camera } = useThree();
   const controlsRef = useRef<any>(null);
+  const [welcomeAnimated, setWelcomeAnimated] = useState(false);
   
+  // Welcome animation - zoom out from first star
   useEffect(() => {
-    if (newStarPosition && controlsRef.current) {
-      const [x, y, z] = newStarPosition;
-      const targetPos = new THREE.Vector3(x, y, z);
-      const startTarget = controlsRef.current.target.clone();
-      const duration = 2000;
-      const startTime = Date.now();
+    if (showWelcome && !welcomeAnimated && controlsRef.current && galaxyReady) {
+      // ابدأ الكاميرا قريبة جداً من مركز المجرة
+      camera.position.set(5, 3, 8);
+      controlsRef.current.target.set(0, 0, 0);
+      controlsRef.current.update();
       
-      const animate = () => {
-        const elapsed = Date.now() - startTime;
-        const progress = Math.min(elapsed / duration, 1);
-        const easeProgress = 1 - Math.pow(1 - progress, 3);
+      // انتظر قليلاً ثم ابدأ الـ zoom out
+      setTimeout(() => {
+        gsap.to(camera.position, {
+          x: 150,
+          y: 100,
+          z: 200,
+          duration: 4,
+          ease: "power2.out",
+          onUpdate: () => {
+            controlsRef.current?.update();
+          },
+          onComplete: () => {
+            setWelcomeAnimated(true);
+            onWelcomeComplete?.();
+          }
+        });
         
-        controlsRef.current.target.lerpVectors(startTarget, targetPos, easeProgress);
-        controlsRef.current.update();
-        
-        if (progress < 1) {
-          requestAnimationFrame(animate);
-        }
-      };
-      
-      animate();
+        gsap.to(controlsRef.current.target, {
+          x: 0,
+          y: 0,
+          z: 0,
+          duration: 4,
+          ease: "power2.out",
+        });
+      }, 500);
     }
-  }, [newStarPosition]);
+  }, [showWelcome, welcomeAnimated, camera, onWelcomeComplete, galaxyReady]);
+  
+  // Cinematic transition to star
+  useEffect(() => {
+    if (newStarPosition && controlsRef.current && !showWelcome) {
+      const [x, y, z] = newStarPosition;
+      
+      // حساب موقع الكاميرا (بعيد عن النجمة)
+      const starPos = new THREE.Vector3(x, y, z);
+      const offset = new THREE.Vector3(30, 20, 40);
+      const cameraTarget = starPos.clone().add(offset);
+      
+      // GSAP animation للكاميرا
+      gsap.to(camera.position, {
+        x: cameraTarget.x,
+        y: cameraTarget.y,
+        z: cameraTarget.z,
+        duration: 2.5,
+        ease: "power2.inOut",
+        onUpdate: () => {
+          controlsRef.current?.update();
+        }
+      });
+      
+      // GSAP animation للـ target
+      gsap.to(controlsRef.current.target, {
+        x: starPos.x,
+        y: starPos.y,
+        z: starPos.z,
+        duration: 2.5,
+        ease: "power2.inOut",
+      });
+    }
+  }, [newStarPosition, camera, showWelcome]);
   
   return (
     <OrbitControls
@@ -108,16 +168,13 @@ function CameraController({ newStarPosition }: { newStarPosition?: [number, numb
   );
 }
 
-export default function Scene({ onStarClick, newStarPosition, refreshTrigger }: SceneProps) {
-  // Random camera position at start
-  const randomX = (Math.random() - 0.5) * 400;
-  const randomY = (Math.random() - 0.5) * 400;
-  const randomZ = 50 + Math.random() * 150;
+export default function Scene({ onStarClick, newStarPosition, refreshTrigger, targetStarId, showWelcome, onWelcomeComplete }: SceneProps) {
+  const [galaxyReady, setGalaxyReady] = useState(false);
   
   return (
     <Canvas
       camera={{
-        position: [randomX, randomY, randomZ],
+        position: [5, 3, 8], // ابدأ قريب للرسالة الترحيبية
         fov: 75,
       }}
       dpr={[1, 2]}
@@ -156,12 +213,19 @@ export default function Scene({ onStarClick, newStarPosition, refreshTrigger }: 
           onStarClick={onStarClick}
           newStarPosition={newStarPosition}
           refreshTrigger={refreshTrigger}
+          targetStarId={targetStarId}
+          onReady={() => setGalaxyReady(true)}
         />
         
         {/* Shooting stars for beauty */}
         <ShootingStars />
 
-        <CameraController newStarPosition={newStarPosition} />
+        <CameraController 
+          newStarPosition={newStarPosition}
+          showWelcome={showWelcome}
+          onWelcomeComplete={onWelcomeComplete}
+          galaxyReady={galaxyReady}
+        />
 
         <EffectComposer>
           <Bloom

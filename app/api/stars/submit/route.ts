@@ -308,13 +308,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if this is the first star (star #0)
-    const { count: currentStarsCount } = await supabase
-      .from('stars')
-      .select('*', { count: 'exact', head: true });
-    
-    // First star is purple, rest are white
-    const color = currentStarsCount === 0 ? '#8C1FA6' : '#ffffff';
+    // جميع النجوم بلون أبيض موحد
+    const color = '#ffffff';
 
     // Submit to database with sanitized message
     const star = await submitStar(fingerprintId, sanitizedMessage, position, color);
