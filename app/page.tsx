@@ -75,14 +75,13 @@ export default function Home() {
   };
 
   const handleStarFound = (star: any) => {
-    // تحديد الـ ID للانتقال إليه
+    // تحديد الـ ID للانتقال إليه (بدون newStarPosition لتجنب أنميشن الانفجار)
     setTargetStarId(star.id);
-    setNewStarPosition(star.position);
     
-    // مسح targetStarId بعد 3.5 ثانية لتجنب إعادة الفتح
+    // مسح targetStarId بعد 2 ثانية
     setTimeout(() => {
       setTargetStarId(null);
-    }, 3500);
+    }, 2000);
   };
 
   return (

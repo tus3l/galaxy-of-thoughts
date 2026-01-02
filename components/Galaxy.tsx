@@ -370,28 +370,17 @@ export default function Galaxy({
     }
   }, [newStarPosition, camera]);
   
-  // تمييز النجمة المستهدفة عند البحث
+  // تمييز النجمة المستهدفة عند البحث (بدون أنميشن الانفجار)
   useEffect(() => {
     if (targetStarId !== null && targetStarId !== undefined) {
       const starIndex = allStars.findIndex(s => s.id === targetStarId);
       
       if (starIndex !== -1) {
-        // تشغيل أنيميشن خاص للنجمة المستهدفة
-        newStarAnimationRef.current = {
-          index: starIndex,
-          startTime: Date.now()
-        };
-        
-        // بعد 3 ثواني، افتح النجمة مرة واحدة فقط
+        // افتح النجمة مباشرة بعد تحريك الكاميرا
         const openTimer = setTimeout(() => {
           const star = allStars[starIndex];
           onStarClick?.(star);
-          
-          // إيقاف الأنيميشن بعد الفتح
-          setTimeout(() => {
-            newStarAnimationRef.current = null;
-          }, 100);
-        }, 3000);
+        }, 2200); // 2.2 ثانية للكاميرا
         
         return () => {
           clearTimeout(openTimer);

@@ -61,11 +61,15 @@ function CameraController({
   showWelcome, 
   onWelcomeComplete,
   galaxyReady,
+  targetStarId,
+  allStars,
 }: { 
   newStarPosition?: [number, number, number];
   showWelcome?: boolean;
   onWelcomeComplete?: () => void;
   galaxyReady: boolean;
+  targetStarId?: number | null;
+  allStars: any[];
 }) {
   const { camera, scene } = useThree();
   const controlsRef = useRef<any>(null);
@@ -108,7 +112,45 @@ function CameraController({
     }
   }, [showWelcome, welcomeAnimated, camera, onWelcomeComplete, galaxyReady]);
   
-  // Cinematic transition to star
+  // البحث عن نجمة - انتقال سريع بدون أنميشن انفجار
+  useEffect(() => {
+    if (targetStarId !== null && targetStarId !== undefined && allStars.length > 0 && controlsRef.current && !showWelcome) {
+      const star = allStars.find(s => s.id === targetStarId);
+      if (star && star.position) {
+        const [x, y, z] = star.position;
+        
+        const starPos = new THREE.Vector3(x, y, z);
+        const offset = new THREE.Vector3(30, 20, 40);
+        const cameraTarget = starPos.clone().add(offset);
+        
+        // تعطيل damping للحركة السلسة
+        controlsRef.current.enableDamping = false;
+        controlsRef.current.enabled = false;
+        
+        gsap.to(camera.position, {
+          x: cameraTarget.x,
+          y: cameraTarget.y,
+          z: cameraTarget.z,
+          duration: 2.2,
+          ease: "power2.out", // حركة أكثر سلاسة
+          onUpdate: () => {
+            if (controlsRef.current) {
+              controlsRef.current.target.set(starPos.x, starPos.y, starPos.z);
+              controlsRef.current.update();
+            }
+          },
+          onComplete: () => {
+            if (controlsRef.current) {
+              controlsRef.current.enableDamping = true;
+              controlsRef.current.enabled = true;
+            }
+          }
+        });
+      }
+    }
+  }, [targetStarId, allStars, camera, controlsRef, showWelcome]);
+  
+  // Cinematic transition to star (للنجوم الجديدة فقط)
   useEffect(() => {
     if (newStarPosition && controlsRef.current && !showWelcome) {
       const [x, y, z] = newStarPosition;
@@ -117,23 +159,28 @@ function CameraController({
       const offset = new THREE.Vector3(30, 20, 40);
       const cameraTarget = starPos.clone().add(offset);
       
+      // تعطيل damping للحركة السلسة
+      controlsRef.current.enableDamping = false;
+      controlsRef.current.enabled = false;
+      
       gsap.to(camera.position, {
         x: cameraTarget.x,
         y: cameraTarget.y,
         z: cameraTarget.z,
-        duration: 2.5,
-        ease: "power2.inOut",
+        duration: 2.2,
+        ease: "power2.out", // حركة أكثر سلاسة
         onUpdate: () => {
-          controlsRef.current?.update();
+          if (controlsRef.current) {
+            controlsRef.current.target.set(starPos.x, starPos.y, starPos.z);
+            controlsRef.current.update();
+          }
+        },
+        onComplete: () => {
+          if (controlsRef.current) {
+            controlsRef.current.enableDamping = true;
+            controlsRef.current.enabled = true;
+          }
         }
-      });
-      
-      gsap.to(controlsRef.current.target, {
-        x: starPos.x,
-        y: starPos.y,
-        z: starPos.z,
-        duration: 2.5,
-        ease: "power2.inOut",
       });
     }
   }, [newStarPosition, camera, showWelcome]);
@@ -309,7 +356,7 @@ function CameraController({
     <OrbitControls
       ref={controlsRef}
       enableDamping
-      dampingFactor={0.05}
+      dampingFactor={0.08}
       rotateSpeed={0.5}
       enableZoom={true}
       zoomSpeed={0.8}
@@ -388,6 +435,8 @@ export default function Scene({ onStarClick, newStarPosition, refreshTrigger, ta
           showWelcome={showWelcome}
           onWelcomeComplete={onWelcomeComplete}
           galaxyReady={galaxyReady}
+          targetStarId={targetStarId}
+          allStars={allStars}
         />
 
         <EffectComposer>
